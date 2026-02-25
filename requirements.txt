@@ -1,0 +1,28 @@
+# Dissertation Project Requirements
+
+# Core
+numpy>=1.24.0
+pillow>=10.0.0
+pyyaml>=6.0
+tqdm>=4.65.0
+
+# Physics Engine
+pybullet>=3.2.5
+
+# Video Processing
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.9
+opencv-python>=4.8.0
+
+# 3D Model Generation (Shap-E via HuggingFace)
+torch>=2.0.0
+transformers>=4.35.0
+diffusers>=0.24.0
+accelerate>=0.24.0
+trimesh>=4.0.0
+
+# Video Enhancement (ControlNet) - optional
+# safetensors>=0.4.0
+
+# Story Agent (LLM mode) - optional
+# openai>=1.0.0

@@ -1,0 +1,68 @@
+# ─── Model checkpoints & weights ────────────────────────────────────────────
+checkpoints/
+m1_checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+
+# ─── Training data & datasets ────────────────────────────────────────────────
+data/
+# Keep schema / small example files if added later:
+# !data/examples/
+
+# ─── Generated outputs ───────────────────────────────────────────────────────
+outputs/
+*.mp4
+*.avi
+*.npy
+*.npz
+
+# ─── Experiment tracking ─────────────────────────────────────────────────────
+wandb/
+runs/
+tmp/
+
+# ─── Python cache ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ─── Virtual environments ────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+
+# ─── Jupyter ─────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── OS & editor noise ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/settings.json
+*.swp
+*.swo
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Large asset files ───────────────────────────────────────────────────────
+assets/environments/
+assets/objects/
+*.obj
+*.mtl
+*.fbx
+*.glb
+*.gltf
+*.dae
+*.urdf

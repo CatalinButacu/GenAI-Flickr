@@ -1,0 +1,111 @@
+﻿"""Plans spatial layout of parsed entities for physics simulation."""
+
+import logging
+from dataclasses import dataclass, field
+from typing import Dict, Optional
+
+from src.shared.vocabulary import OBJECTS, SpatialRelation
+
+log = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class Position3D:
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+
+    def to_list(self) -> list[float]:
+        return [self.x, self.y, self.z]
+
+    def __add__(self, other: "Position3D") -> "Position3D":
+        return Position3D(self.x + other.x, self.y + other.y, self.z + other.z)
+
+
+@dataclass(slots=True)
+class PlannedEntity:
+    name: str
+    object_type: str
+    position: Position3D
+    rotation: tuple[float, float, float, float] = (0, 0, 0, 1)
+    color: Optional[tuple[float, ...]] = None
+    is_actor: bool = False
+    size: list[float] = field(default_factory=lambda: [0.1, 0.1, 0.1])
+    mass: float = 1.0
+
+
+@dataclass(slots=True)
+class PlannedScene:
+    entities: list[PlannedEntity]
+    ground_size: tuple[float, float] = (10.0, 10.0)
+    camera_distance: float = 2.5
+
+
+class ScenePlanner:
+    """Computes 3D positions from parsed spatial relations and actions."""
+
+    _ACTOR_DIST = 1.5
+    _OBJ_SPACE  = 0.4
+    _FALL_H     = 1.5
+    _GROUND_H   = 0.5
+    _CLOSE_ACT  = {"kick": 0.8, "pick_up": 0.5}
+
+    def plan(self, parsed_scene) -> PlannedScene:
+        actors  = [e for e in parsed_scene.entities if e.is_actor]
+        objects = [e for e in parsed_scene.entities if not e.is_actor]
+        obj_pos = self._place_objects(objects, parsed_scene.actions)
+        act_pos = self._place_actors(actors, parsed_scene.actions, obj_pos)
+        entities = []
+        for e in parsed_scene.entities:
+            pos = (act_pos if e.is_actor else obj_pos).get(
+                e.name, Position3D(0, -self._ACTOR_DIST if e.is_actor else 0, self._GROUND_H)
+            )
+            od = OBJECTS.get(e.object_type)
+            entities.append(PlannedEntity(
+                name=e.name, object_type=e.object_type, position=pos,
+                color=e.color, is_actor=e.is_actor,
+                size=od.default_size if od else [0.1, 0.1, 0.1],
+                mass=od.default_mass if od else 1.0,
+            ))
+        log.info("ScenePlanner: %d entities positioned", len(entities))
+        return PlannedScene(entities=entities)
+
+    def _place_objects(self, objects, actions) -> Dict[str, Position3D]:
+        is_fall = any(a.action_type == "fall" for a in actions)
+        pos: Dict[str, Position3D] = {}
+        for i, obj in enumerate(objects):
+            z = self._GROUND_H
+            for a in actions:
+                if a.action_type == "fall":
+                    z = self._FALL_H if a.actor == obj.name else self._GROUND_H
+                    break
+            pos[obj.name] = Position3D(i * self._OBJ_SPACE, 0, z)
+        if len(objects) == 2 and is_fall:
+            for a in actions:
+                if a.action_type == "fall" and a.target:
+                    falling = next((o.name for o in objects if o.name != a.target), None)
+                    if falling:
+                        pos[a.target]  = Position3D(0, 0, 0.1)
+                        pos[falling]   = Position3D(0, 0, self._FALL_H)
+                    break
+        return pos
+
+    def _place_actors(self, actors, actions, obj_pos) -> Dict[str, Position3D]:
+        pos: Dict[str, Position3D] = {}
+        for actor in actors:
+            target, act_type = None, None
+            for a in actions:
+                if a.actor == actor.name and a.target:
+                    target, act_type = a.target, a.action_type
+                    break
+            if target and target in obj_pos:
+                tp = obj_pos[target]
+                d  = self._CLOSE_ACT.get(act_type, self._ACTOR_DIST)
+                pos[actor.name] = Position3D(tp.x, tp.y - d, 0)
+            else:
+                pos[actor.name] = Position3D(0, -self._ACTOR_DIST, 0)
+        return pos
+
+
+def plan_scene(parsed_scene) -> PlannedScene:
+    return ScenePlanner().plan(parsed_scene)
