@@ -6,6 +6,11 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple, Dict
 
+from .constants import (
+    DEFAULT_DATA_DIR, DEFAULT_SSM_CHECKPOINT, MOTION_DIM, MOTION_FPS,
+)
+from .tokenizer import build_vocab, tokenize
+
 log = logging.getLogger(__name__)
 
 try:
@@ -19,14 +24,14 @@ except ImportError:
     log.warning("PyTorch not available")
 
 
-@dataclass(slots=True)
+@dataclass
 class TrainingConfig:
-    data_dir: str            = "data/KIT-ML"
+    data_dir: str            = DEFAULT_DATA_DIR
     max_motion_length: int   = 200
     d_model: int             = 256
     d_state: int             = 32
     n_layers: int            = 4
-    motion_dim: int          = 251
+    motion_dim: int          = MOTION_DIM
     text_embed_dim: int      = 256
     max_text_length: int     = 64
     vocab_size: int          = 10000
@@ -36,7 +41,7 @@ class TrainingConfig:
     num_epochs: int          = 100
     warmup_steps: int        = 1000
     grad_clip: float         = 1.0
-    checkpoint_dir: str      = "checkpoints/motion_ssm"
+    checkpoint_dir: str      = os.path.dirname(DEFAULT_SSM_CHECKPOINT)
     save_every: int          = 10
     device: str              = "cuda" if HAS_TORCH and torch.cuda.is_available() else "cpu"
 
@@ -110,28 +115,16 @@ if HAS_TORCH:
             from src.data import KITMLLoader
             self.dataset    = KITMLLoader(data_dir).load_dataset(split, normalize=True)
             self.max_length = max_length
-            self.vocab      = vocab or self._build_vocab()
-
-        def _build_vocab(self) -> Dict[str, int]:
-            vocab = {"<PAD>": 0, "<UNK>": 1, "<BOS>": 2, "<EOS>": 3}
-            for s in self.dataset.samples:
-                for w in s.text.lower().split():
-                    vocab.setdefault(w, len(vocab))
-            log.info("Vocab size: %d", len(vocab))
-            return vocab
-
-        def _tokenize(self, text: str, max_len: int = 64) -> np.ndarray:
-            unk = self.vocab["<UNK>"]
-            tokens = [self.vocab["<BOS>"]] + [self.vocab.get(w, unk) for w in text.lower().split()[:max_len - 2]] + [self.vocab["<EOS>"]]
-            tokens += [0] * (max_len - len(tokens))
-            return np.array(tokens[:max_len], dtype=np.int64)
+            self.vocab      = vocab or build_vocab([s.text for s in self.dataset.samples])
+            if vocab is None:
+                log.info("Vocab size: %d", len(self.vocab))
 
         def __len__(self):
             return len(self.dataset.samples)
 
         def __getitem__(self, idx):
             s      = self.dataset.samples[idx]
-            tokens = self._tokenize(s.text)
+            tokens = tokenize(s.text, self.vocab)
             motion = s.motion[:self.max_length]
             if len(motion) < self.max_length:
                 motion = np.concatenate([motion, np.zeros((self.max_length - len(motion), motion.shape[1]))])

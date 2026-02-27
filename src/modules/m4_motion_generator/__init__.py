@@ -4,7 +4,7 @@ Motion Generator Module (Module 4)
 Generates humanoid motion from text descriptions.
 
 Backends:
-- "retrieval": Fetch ground truth from KIT-ML dataset (most reliable)
+- "retrieval": Fetch ground truth from KIT-ML dataset (keyword or SBERT semantic)
 - "ssm": Trained State Space Model
 - "placeholder": Simple procedural motion (fallback)
 
@@ -23,11 +23,17 @@ from .generator import (
     SSMMotionModel,
     create_motion_generator,
 )
+from .semantic_retriever import SemanticRetriever
+from .constants import MOTION_DIM, MOTION_FPS, DEFAULT_DATA_DIR
 
 __all__ = [
     "MotionGenerator",
-    "MotionClip", 
+    "MotionClip",
     "MotionRetriever",
+    "SemanticRetriever",
     "SSMMotionModel",
     "create_motion_generator",
+    "MOTION_DIM",
+    "MOTION_FPS",
+    "DEFAULT_DATA_DIR",
 ]

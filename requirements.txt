@@ -21,6 +21,12 @@ diffusers>=0.24.0
 accelerate>=0.24.0
 trimesh>=4.0.0
 
+# M2: Constraint-based spatial layout
+scipy>=1.11.0
+
+# M4: Semantic motion retrieval (SBERT)
+sentence-transformers>=2.2.0
+
 # Video Enhancement (ControlNet) - optional
 # safetensors>=0.4.0
 

@@ -150,8 +150,8 @@ class M4Benchmark:
         for name, prompt in actions:
             try:
                 clip = self.generator.generate(prompt, num_frames=60, prefer="retrieval")
-                ok = clip is not None and clip.source == "retrieved"
-                self.test(name, ok, f"{clip.num_frames}f" if clip else "")
+                ok = clip is not None and clip.source in ("retrieved", "semantic_retrieved")
+                self.test(name, ok, f"{clip.num_frames}f {clip.source}" if clip else "")
             except Exception as e:
                 self.test(name, False, str(e)[:30])
 

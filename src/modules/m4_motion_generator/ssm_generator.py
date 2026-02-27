@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.modules.m4_motion_generator.generator import MotionGenerator, MotionClip
+from src.modules.m4_motion_generator.constants import MOTION_DIM
 from src.shared.vocabulary import ACTIONS
 
 log = logging.getLogger(__name__)
@@ -16,8 +17,6 @@ try:
 except ImportError:
     HAS_SSM  = False
     HAS_TORCH = False
-
-_MOTION_DIM = 251  # KIT-ML
 
 
 @dataclass(slots=True)
@@ -51,7 +50,7 @@ class SSMMotionGenerator(MotionGenerator):
             self._ready = True
             return True
         if not HAS_TORCH:
-            self._ssm = SimpleSSMNumpy(self._cfg.d_state, self._cfg.d_model, _MOTION_DIM)
+            self._ssm = SimpleSSMNumpy(self._cfg.d_state, self._cfg.d_model, MOTION_DIM)
             self._ready = True
             return True
         try:
@@ -92,7 +91,7 @@ class SSMMotionGenerator(MotionGenerator):
     def _to_clip(self, features: np.ndarray, text: str) -> MotionClip:
         """Project (frames, d_model)  (frames, motion_dim) numpy array."""
         rng    = np.random.default_rng(seed=abs(hash(text)) % (2**31))
-        proj   = rng.standard_normal((features.shape[-1], _MOTION_DIM)).astype(np.float32) * 0.01
+        proj   = rng.standard_normal((features.shape[-1], MOTION_DIM)).astype(np.float32) * 0.01
         frames = features.astype(np.float32) @ proj
         return MotionClip(action=text, frames=frames, fps=20, source="ssm")
 

@@ -16,7 +16,7 @@ class PipelineConfig:
     output_dir: str = "outputs"
     assets_dir: str = "assets/objects"
     use_t5_parser: bool = True           # M1: prefer T5 model over rules parser
-    use_asset_generation: bool = False  # M3: Shap-E (GPU)
+    use_asset_generation: bool = False   # M3: Shap-E (GPU)
     use_motion_generation: bool = True   # M4: SSM / KIT-ML
     use_rl_controller: bool = False      # M6: PPO stub
     use_ai_enhancement: bool = False     # M8: ControlNet (GPU)
@@ -81,7 +81,7 @@ class Pipeline:
 
     def _init_motion_gen(self) -> None:
         from src.modules.m4_motion_generator import MotionGenerator
-        self._motion_gen = MotionGenerator(use_retrieval=True, use_ssm=True)
+        self._motion_gen = MotionGenerator(use_retrieval=True, use_ssm=True, use_semantic=True)
 
     def _init_enhancer(self) -> None:
         # Prefer AnimateDiff (temporal consistency) over per-frame ControlNet.
