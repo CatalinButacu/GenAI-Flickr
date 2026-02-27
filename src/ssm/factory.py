@@ -19,9 +19,7 @@ import logging
 from .config import SSMConfig
 from .s4 import S4Layer
 from .mamba import MambaLayer
-from .temporal import TemporalConsistencySSM
-from .motion_ssm import MotionSSM
-from .physics_ssm import PhysicsSSM
+from .composites import TemporalConsistencySSM, MotionSSM, PhysicsSSM
 
 logger = logging.getLogger(__name__)
 

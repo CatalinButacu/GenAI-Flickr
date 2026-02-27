@@ -20,7 +20,7 @@ from typing import Dict, List
 
 import numpy as np
 
-from .camera import (                            # noqa: F401 — re-exports
+from .camera import (
     CameraConfig, CinematicCamera, EasingFunctions, FrameData,
 )
 from .scene import Scene

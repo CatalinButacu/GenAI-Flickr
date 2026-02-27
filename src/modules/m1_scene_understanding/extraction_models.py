@@ -4,23 +4,25 @@
     orchestrator.py, and templates.py within M1.
 
 #WHAT
-    Data models for the M1 extraction stage.  These represent the raw
-    entities, actions, and relations parsed from a user prompt before
-    any reasoning or scene building occurs.
+    Data models for the M1 extraction and reasoning stages.
+    Extraction models: raw entities, actions, and relations parsed from a
+    user prompt.  Reasoning models: activity templates with spatial hints
+    and implicit entities used during scene enrichment.
 
 #INPUT
-    Raw text prompt fields (name, verb, spans, attributes, etc.).
+    Raw text prompt fields (name, verb, spans, attributes, etc.),
+    activity template definitions with trigger verbs/nouns.
 
 #OUTPUT
-    Typed dataclass instances: ExtractionResult containing lists of
-    ExtractedEntity, ExtractedAction, and ExtractedRelation.
+    Typed dataclass instances — ExtractionResult (extraction) and
+    ActivityTemplate / ImplicitEntity / SpatialHint (reasoning).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 
 class EntityType(Enum):
@@ -113,3 +115,35 @@ class ExtractionResult:
     @property
     def dynamic_entities(self) -> List[ExtractedEntity]:
         return [e for e in self.entities if not e.is_static]
+
+
+# ── Reasoning-stage models ──────────────────────────────────────────
+
+@dataclass(slots=True)
+class ImplicitEntity:
+    name: str
+    entity_type: EntityType
+    role: str
+    required: bool = True
+    default_dimensions: Optional[Dict[str, float]] = None
+    default_mass: Optional[float] = None
+    mesh_prompt: str = ""
+
+
+@dataclass(slots=True)
+class SpatialHint:
+    source_role: str
+    target_role: str
+    relation: str
+    distance_m: float = 1.0
+
+
+@dataclass
+class ActivityTemplate:
+    name: str
+    trigger_verbs: Set[str]
+    trigger_nouns: Set[str] = field(default_factory=set)
+    expected_person_count: Optional[int] = None
+    implicit_entities: List[ImplicitEntity] = field(default_factory=list)
+    spatial_hints: List[SpatialHint] = field(default_factory=list)
+    default_setting: str = ""

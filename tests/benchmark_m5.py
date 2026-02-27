@@ -46,7 +46,7 @@ class M5Benchmark:
             self.test("2. Scene classes", False, str(e)[:30])
 
         try:
-            from src.modules.m5_physics_engine.simulator import FrameData, EasingFunctions  # noqa: F401
+            from src.modules.m5_physics_engine.camera import FrameData, EasingFunctions  # noqa: F401
             self.test("3. Simulator classes", True)
         except ImportError as e:
             self.test("3. Simulator classes", False, str(e)[:30])

@@ -47,7 +47,8 @@ class M4Benchmark:
             return False
 
         try:
-            from src.modules.m4_motion_generator.generator import MotionRetriever, SSMMotionModel  # noqa: F401
+            from src.modules.m4_motion_generator.keyword_retriever import MotionRetriever  # noqa: F401
+            from src.modules.m4_motion_generator.ssm_model import SSMMotionModel  # noqa: F401
             self.test("2. Backend classes import", True)
         except ImportError as e:
             self.test("2. Backend classes import", False, str(e)[:30])

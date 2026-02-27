@@ -20,7 +20,8 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Optional
 
-from src.modules.m4_motion_generator.generator import MotionGenerator, MotionClip
+from src.modules.m4_motion_generator.generator import MotionGenerator
+from src.modules.m4_motion_generator.models import MotionClip
 from src.modules.m4_motion_generator.constants import MOTION_DIM
 from src.shared.vocabulary import ACTIONS
 

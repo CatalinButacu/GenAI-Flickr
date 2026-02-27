@@ -21,9 +21,7 @@ HAS_TORCH = True
 from .config import SSMConfig
 from .s4 import S4Layer
 from .mamba import MambaLayer
-from .temporal import TemporalConsistencySSM
-from .motion_ssm import MotionSSM
-from .physics_ssm import PhysicsSSM
+from .composites import TemporalConsistencySSM, MotionSSM, PhysicsSSM
 from .numpy_ssm import SimpleSSMNumpy
 from .factory import create_ssm_layer, get_ssm_info
 

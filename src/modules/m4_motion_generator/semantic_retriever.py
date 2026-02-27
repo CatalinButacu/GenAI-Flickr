@@ -23,7 +23,8 @@ from typing import Optional
 import numpy as np
 
 from .constants import DEFAULT_DATA_DIR
-from .generator import MotionClip, MotionRetriever
+from .models import MotionClip
+from .keyword_retriever import MotionRetriever
 
 log = logging.getLogger(__name__)
 

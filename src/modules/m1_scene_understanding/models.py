@@ -1,8 +1,7 @@
 """
 #WHERE
     Re-export shim — keeps existing `from .models import X` working.
-    New code should import from extraction_models, scene_models,
-    or reasoning_models directly.
+    New code should import from extraction_models or scene_models directly.
 
 #WHAT
     Backward-compatible re-export of all M1 data models.
@@ -11,7 +10,7 @@
     See the individual sub-modules for details.
 """
 
-# Extraction stage
+# Extraction + reasoning stage
 from .extraction_models import (          # noqa: F401
     EntityType,
     ExtractedAttribute,
@@ -19,6 +18,9 @@ from .extraction_models import (          # noqa: F401
     ExtractedAction,
     ExtractedRelation,
     ExtractionResult,
+    ImplicitEntity,
+    SpatialHint,
+    ActivityTemplate,
 )
 
 # Final scene description
@@ -27,11 +29,4 @@ from .scene_models import (               # noqa: F401
     SceneAction,
     CameraMotion,
     SceneDescription,
-)
-
-# Reasoning / templates
-from .reasoning_models import (           # noqa: F401
-    ImplicitEntity,
-    SpatialHint,
-    ActivityTemplate,
 )

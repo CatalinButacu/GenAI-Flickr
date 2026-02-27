@@ -21,9 +21,9 @@ import numpy as np
 
 from src.shared.mem_profile import profile_memory
 from .constants import DEFAULT_DATA_DIR, DEFAULT_SSM_CHECKPOINT, MOTION_DIM
-from .models import MotionClip                    # noqa: F401  — re-export
-from .keyword_retriever import MotionRetriever    # noqa: F401  — re-export
-from .ssm_model import SSMMotionModel             # noqa: F401  — re-export
+from .models import MotionClip
+from .keyword_retriever import MotionRetriever
+from .ssm_model import SSMMotionModel
 
 log = logging.getLogger(__name__)
 
