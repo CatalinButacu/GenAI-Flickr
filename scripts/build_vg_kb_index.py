@@ -94,13 +94,9 @@ class TextEncoder:
         self._model = None
 
     def load(self) -> None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            self._model = SentenceTransformer(self._model_name)
-            log.info("Loaded embedding model: %s", self._model_name)
-        except ImportError:
-            log.error("sentence-transformers not installed. Run: pip install sentence-transformers")
-            sys.exit(1)
+        from sentence_transformers import SentenceTransformer
+        self._model = SentenceTransformer(self._model_name)
+        log.info("Loaded embedding model: %s", self._model_name)
 
     def encode(self, texts: List[str], batch_size: int = 256) -> np.ndarray:
         assert self._model is not None, "Call load() first"
@@ -123,11 +119,7 @@ class FAISSIndexBuilder:
     """Builds and persists a FAISS IndexFlatIP (inner product = cosine on L2-normed vecs)."""
 
     def build_and_save(self, embeddings: np.ndarray, output_path: Path) -> None:
-        try:
-            import faiss
-        except ImportError:
-            log.error("faiss not installed. Run: pip install faiss-cpu")
-            sys.exit(1)
+        import faiss
 
         dim = embeddings.shape[1]
         index = faiss.IndexFlatIP(dim)

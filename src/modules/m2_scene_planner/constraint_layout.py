@@ -111,32 +111,111 @@ def build_constraints(relations: List[Dict]) -> List[SpatialConstraint]:
     Returns:
         List of SpatialConstraint objects (non-spatial predicates filtered out).
     """
-    constraints: List[SpatialConstraint] = []
-    for rel in relations:
-        subj = rel.get("subject", "").strip().lower()
-        pred = rel.get("predicate", "").strip().lower()
-        obj  = rel.get("object", "").strip().lower()
-        if not subj or not pred or not obj:
-            continue
-        if pred in _SKIP_PREDS:
-            continue
-        ctype = _PRED_MAP.get(pred)
-        if ctype is None:
-            # Try partial match for compound predicates like "standing on"
-            for key, ct in _PRED_MAP.items():
-                if key in pred:
-                    ctype = ct
-                    break
-        if ctype is None:
-            log.debug("Skipping unknown predicate: %r", pred)
-            continue
-        constraints.append(SpatialConstraint(subject=subj, object=obj, ctype=ctype))
-    return constraints
+    return [c for rel in relations if (c := _parse_one_constraint(rel)) is not None]
+
+
+def _parse_one_constraint(rel: Dict) -> SpatialConstraint | None:
+    """Parse a single relation dict into a SpatialConstraint, or None."""
+    subj = rel.get("subject", "").strip().lower()
+    pred = rel.get("predicate", "").strip().lower()
+    obj  = rel.get("object", "").strip().lower()
+    if not subj or not pred or not obj:
+        return None
+    if pred in _SKIP_PREDS:
+        return None
+    ctype = _resolve_predicate(pred)
+    if ctype is None:
+        log.debug("Skipping unknown predicate: %r", pred)
+        return None
+    return SpatialConstraint(subject=subj, object=obj, ctype=ctype)
+
+
+def _resolve_predicate(pred: str) -> str | None:
+    """Map a predicate string to its canonical constraint type."""
+    ctype = _PRED_MAP.get(pred)
+    if ctype is not None:
+        return ctype
+    # Partial match for compound predicates like "standing on"
+    for key, ct in _PRED_MAP.items():
+        if key in pred:
+            return ct
+    return None
 
 
 # ---------------------------------------------------------------------------
 # Energy function for scipy.optimize
 # ---------------------------------------------------------------------------
+
+def _cost_on(sx, sy, sz, ox, oy, oz):
+    """Subject directly on top of object: align XY, stack Z."""
+    return ((sx - ox) ** 2 + (sy - oy) ** 2) + (sz - oz - _STACK_GAP) ** 2
+
+
+def _cost_above(sx, sy, sz, ox, oy, oz):
+    return max(0, oz + _STACK_GAP - sz) ** 2
+
+
+def _cost_below(sx, sy, sz, ox, oy, oz):
+    return max(0, sz - oz + _STACK_GAP) ** 2
+
+
+def _cost_front(sx, sy, sz, ox, oy, oz):
+    return max(0, sy - oy + _SIDE_OFFSET) ** 2
+
+
+def _cost_behind(sx, sy, sz, ox, oy, oz):
+    return max(0, oy - sy + _SIDE_OFFSET) ** 2
+
+
+def _cost_beside(sx, sy, sz, ox, oy, oz):
+    return (abs(sx - ox) - _SIDE_OFFSET) ** 2 + (sz - oz) ** 2
+
+
+def _cost_near(sx, sy, sz, ox, oy, oz):
+    dist = np.sqrt((sx - ox)**2 + (sy - oy)**2 + (sz - oz)**2)
+    return (dist - _NEAR_DIST) ** 2
+
+
+def _cost_left(sx, sy, sz, ox, oy, oz):
+    return max(0, sx - ox + _SIDE_OFFSET) ** 2
+
+
+def _cost_right(sx, sy, sz, ox, oy, oz):
+    return max(0, ox - sx + _SIDE_OFFSET) ** 2
+
+
+def _cost_inside(sx, sy, sz, ox, oy, oz):
+    return (sx - ox)**2 + (sy - oy)**2 + (sz - oz)**2
+
+
+# Dispatch table: constraint type → cost function
+_COST_FN = {
+    "ON": _cost_on, "ABOVE": _cost_above, "BELOW": _cost_below,
+    "FRONT": _cost_front, "BEHIND": _cost_behind, "BESIDE": _cost_beside,
+    "NEAR": _cost_near, "LEFT": _cost_left, "RIGHT": _cost_right,
+    "INSIDE": _cost_inside,
+}
+
+
+def _repulsion_cost(pos: np.ndarray, n: int) -> float:
+    """Penalty that prevents entity overlap."""
+    cost = 0.0
+    for i in range(n):
+        for j in range(i + 1, n):
+            dist = np.sqrt(np.sum((pos[i] - pos[j]) ** 2)) + 1e-6
+            if dist < _MIN_DIST:
+                cost += _REPULSION * (_MIN_DIST / dist - 1.0) ** 2
+    return cost
+
+
+def _ground_cost(pos: np.ndarray, n: int) -> float:
+    """Soft penalty for entities below ground level."""
+    cost = 0.0
+    for i in range(n):
+        if pos[i, 2] < _GROUND_Z:
+            cost += 2.0 * (_GROUND_Z - pos[i, 2]) ** 2
+    return cost
+
 
 def _build_energy(
     entity_names: List[str],
@@ -148,68 +227,22 @@ def _build_energy(
     n = len(entity_names)
 
     def energy(x: np.ndarray) -> float:
-        pos = x.reshape(n, 3)  # (n, 3) → each row is [x, y, z]
+        pos = x.reshape(n, 3)
         cost = 0.0
 
         for c in constraints:
             si = name_to_idx.get(c.subject)
             oi = name_to_idx.get(c.object)
             if si is None or oi is None:
-                continue  # entity not in scene (mentioned in relation but not entities list)
-
-            sx, sy, sz = pos[si]
-            ox, oy, oz = pos[oi]
+                continue
+            fn = _COST_FN.get(c.ctype)
+            if fn is None:
+                continue
             w = _W.get(c.ctype, 3.0)
+            cost += w * fn(*pos[si], *pos[oi])
 
-            if c.ctype == "ON":
-                # Subject directly on top of object
-                cost += w * ((sx - ox) ** 2 + (sy - oy) ** 2)  # align x,y
-                cost += w * (sz - oz - _STACK_GAP) ** 2         # z = oz + gap
-
-            elif c.ctype == "ABOVE":
-                cost += w * max(0, oz + _STACK_GAP - sz) ** 2   # sz > oz + gap
-
-            elif c.ctype == "BELOW":
-                cost += w * max(0, sz - oz + _STACK_GAP) ** 2   # sz < oz - gap
-
-            elif c.ctype == "FRONT":
-                cost += w * max(0, sy - oy + _SIDE_OFFSET) ** 2  # sy < oy
-
-            elif c.ctype == "BEHIND":
-                cost += w * max(0, oy - sy + _SIDE_OFFSET) ** 2  # sy > oy
-
-            elif c.ctype == "BESIDE":
-                # Side by side: x offset, same z
-                dx = abs(sx - ox)
-                cost += w * (dx - _SIDE_OFFSET) ** 2
-                cost += w * (sz - oz) ** 2  # same z
-
-            elif c.ctype == "NEAR":
-                dist = np.sqrt((sx - ox)**2 + (sy - oy)**2 + (sz - oz)**2)
-                cost += w * (dist - _NEAR_DIST) ** 2
-
-            elif c.ctype == "LEFT":
-                cost += w * max(0, sx - ox + _SIDE_OFFSET) ** 2  # sx < ox
-
-            elif c.ctype == "RIGHT":
-                cost += w * max(0, ox - sx + _SIDE_OFFSET) ** 2  # sx > ox
-
-            elif c.ctype == "INSIDE":
-                cost += w * ((sx - ox)**2 + (sy - oy)**2 + (sz - oz)**2)
-
-        # Repulsion: prevent overlap between all entity pairs
-        for i in range(n):
-            for j in range(i + 1, n):
-                dx = pos[i] - pos[j]
-                dist = np.sqrt(np.sum(dx ** 2)) + 1e-6
-                if dist < _MIN_DIST:
-                    cost += _REPULSION * (_MIN_DIST / dist - 1.0) ** 2
-
-        # Soft ground constraint: prefer z >= ground level
-        for i in range(n):
-            if pos[i, 2] < _GROUND_Z:
-                cost += 2.0 * (_GROUND_Z - pos[i, 2]) ** 2
-
+        cost += _repulsion_cost(pos, n)
+        cost += _ground_cost(pos, n)
         return cost
 
     return energy
@@ -251,7 +284,7 @@ def solve_layout(
         name_to_idx[name.lower()] = i
 
     n = len(entity_names)
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
 
     # Initialize: spread entities on a grid + small noise
     x0 = np.zeros(n * 3)

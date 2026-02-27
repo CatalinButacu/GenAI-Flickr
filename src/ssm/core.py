@@ -42,18 +42,11 @@ import numpy as np
 from typing import Optional, Tuple, List
 from dataclasses import dataclass
 
-# Check for PyTorch availability
-try:
-    import torch
-    import torch.nn as nn
-    import torch.nn.functional as F
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
-    # Placeholder for when torch is not available
-    class nn:
-        class Module:
-            pass
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+HAS_TORCH = True
 
 logger = logging.getLogger(__name__)
 

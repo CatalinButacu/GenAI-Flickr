@@ -27,6 +27,15 @@ scipy>=1.11.0
 # M4: Semantic motion retrieval (SBERT)
 sentence-transformers>=2.2.0
 
+# Knowledge base index (FAISS)
+faiss-cpu>=1.7.4
+
+# M1: Training & evaluation metrics
+datasets>=2.14.0
+rouge-score>=0.1.2
+nltk>=3.8.0
+wandb>=0.15.0
+
 # Video Enhancement (ControlNet) - optional
 # safetensors>=0.4.0
 

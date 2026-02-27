@@ -161,35 +161,40 @@ class ScenePlanner:
         entity_names: List[str], relations: List[Dict]
     ) -> Dict[str, tuple]:
         """Attempt constraint-based layout. Returns empty dict on failure/no constraints."""
+        from src.modules.m2_scene_planner.constraint_layout import solve_layout
         try:
-            from src.modules.m2_scene_planner.constraint_layout import solve_layout
             return solve_layout(entity_names, relations)
-        except ImportError:
-            log.warning("scipy not available — falling back to row layout")
-            return {}
         except Exception as exc:
             log.warning("Constraint solver failed: %s — falling back", exc)
             return {}
 
     def _place_objects(self, objects, actions) -> Dict[str, Position3D]:
-        is_fall = any(a.action_type == "fall" for a in actions)
         pos: Dict[str, Position3D] = {}
         for i, obj in enumerate(objects):
-            z = self._GROUND_H
-            for a in actions:
-                if a.action_type == "fall":
-                    z = self._FALL_H if a.actor == obj.name else self._GROUND_H
-                    break
+            z = self._resolve_object_z(obj.name, actions)
             pos[obj.name] = Position3D(i * self._OBJ_SPACE, 0, z)
-        if len(objects) == 2 and is_fall:
-            for a in actions:
-                if a.action_type == "fall" and a.target:
-                    falling = next((o.name for o in objects if o.name != a.target), None)
-                    if falling:
-                        pos[a.target]  = Position3D(0, 0, 0.1)
-                        pos[falling]   = Position3D(0, 0, self._FALL_H)
-                    break
+        self._apply_two_object_fall(objects, actions, pos)
         return pos
+
+    def _resolve_object_z(self, name: str, actions) -> float:
+        """Return ground or fall height based on whether the object is falling."""
+        for a in actions:
+            if a.action_type == "fall":
+                return self._FALL_H if a.actor == name else self._GROUND_H
+        return self._GROUND_H
+
+    def _apply_two_object_fall(self, objects, actions, pos: Dict[str, Position3D]):
+        """Override positions when exactly two objects participate in a fall."""
+        if len(objects) != 2:
+            return
+        for a in actions:
+            if a.action_type != "fall" or not a.target:
+                continue
+            falling = next((o.name for o in objects if o.name != a.target), None)
+            if falling:
+                pos[a.target] = Position3D(0, 0, 0.1)
+                pos[falling]  = Position3D(0, 0, self._FALL_H)
+            break
 
     def _place_actors(self, actors, actions, obj_pos) -> Dict[str, Position3D]:
         pos: Dict[str, Position3D] = {}

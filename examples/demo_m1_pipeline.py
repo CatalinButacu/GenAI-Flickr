@@ -234,11 +234,7 @@ def _entity_size(shape: str) -> list:
 # ── Physics simulation ────────────────────────────────────────────────────────
 
 def run_physics(entities: list, output_path: str) -> Optional[str]:
-    try:
-        from src.modules.m5_physics_engine import Scene, Simulator, CameraConfig
-    except ImportError:
-        warn("Physics engine not available (pybullet missing?).")
-        return None
+    from src.modules.m5_physics_engine import Scene, Simulator, CameraConfig
 
     scene = Scene(gravity=-9.81)
     scene.setup()

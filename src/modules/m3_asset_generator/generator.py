@@ -29,10 +29,10 @@ class ShapEBackend:
         self._is_ready = False
     
     def setup(self) -> bool:
+        import torch
+        from diffusers import ShapEPipeline
+
         try:
-            import torch
-            from diffusers import ShapEPipeline
-            
             self._pipe = ShapEPipeline.from_pretrained(
                 "openai/shap-e",
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32
@@ -41,10 +41,6 @@ class ShapEBackend:
             self._is_ready = True
             log.info("Shap-E backend ready")
             return True
-            
-        except ImportError as e:
-            log.error("diffusers not installed: %s", e)
-            return False
         except Exception as e:
             log.error("Shap-E setup failed: %s", e)
             return False

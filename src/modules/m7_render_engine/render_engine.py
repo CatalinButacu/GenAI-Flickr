@@ -140,11 +140,7 @@ class RenderEngine:
         then blend between the sharp frame and progressively blurred versions.
         Falls back gracefully if cv2 is absent.
         """
-        try:
-            import cv2
-        except ImportError:
-            log.debug("[M7] cv2 unavailable — DoF skipped")
-            return rgb
+        import cv2
 
         s = self._s
         focus = s.dof_focus_depth if s.dof_focus_depth is not None else float(np.median(depth))

@@ -182,28 +182,22 @@ class SceneExtractionMetrics:
         metrics["json_syntax_rate"] = valid_json / max(len(predictions), 1)
 
         # ROUGE-L
-        try:
-            from rouge_score import rouge_scorer
-            scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
-            rouge_scores = [
-                scorer.score(ref, pred)["rougeL"].fmeasure
-                for ref, pred in zip(label_strs, predictions)
-            ]
-            metrics["rouge_l"] = sum(rouge_scores) / max(len(rouge_scores), 1)
-        except ImportError:
-            log.warning("rouge_score not installed — skipping ROUGE-L")
+        from rouge_score import rouge_scorer
+        scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
+        rouge_scores = [
+            scorer.score(ref, pred)["rougeL"].fmeasure
+            for ref, pred in zip(label_strs, predictions)
+        ]
+        metrics["rouge_l"] = sum(rouge_scores) / max(len(rouge_scores), 1)
 
         # BLEU-4
-        try:
-            from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
-            refs_tok  = [[ref.split()] for ref in label_strs]
-            preds_tok = [pred.split() for pred in predictions]
-            sf = SmoothingFunction().method1
-            metrics["bleu_4"] = float(corpus_bleu(refs_tok, preds_tok,  # type: ignore[arg-type]
-                                             weights=(0.25, 0.25, 0.25, 0.25),
-                                             smoothing_function=sf))
-        except ImportError:
-            log.warning("nltk not installed — skipping BLEU-4")
+        from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+        refs_tok  = [[ref.split()] for ref in label_strs]
+        preds_tok = [pred.split() for pred in predictions]
+        sf = SmoothingFunction().method1
+        metrics["bleu_4"] = float(corpus_bleu(refs_tok, preds_tok,  # type: ignore[arg-type]
+                                         weights=(0.25, 0.25, 0.25, 0.25),
+                                         smoothing_function=sf))
 
         # Entity F1 (compares extracted entity names between pred and ref JSON)
         f1s = []
@@ -344,30 +338,26 @@ class T5Trainer:
         # --- Optional wandb tracking ---
         report_to = "none"
         if self._wandb_project:
-            try:
-                import wandb  # noqa: F401
-                import wandb as _wandb
-                _wandb.init(
-                    project=self._wandb_project,
-                    name=self._wandb_run_name,
-                    config={
-                        "base_model":    self._model_name,
-                        "epochs":        self._num_epochs,
-                        "batch_size":    self._batch_size,
-                        "lr":            self._lr,
-                        "max_input_len": self._max_input_len,
-                        "max_target_len":self._max_target_len,
-                        "train_samples": len(train_ds),
-                        "val_samples":   len(val_ds),
-                        "grad_accum":    4,
-                    },
-                    settings=_wandb.Settings(start_method="thread"),
-                )
-                report_to = "wandb"
-                log.info("wandb tracking enabled: project=%s run=%s",
-                         self._wandb_project, self._wandb_run_name or "(auto)")
-            except ImportError:
-                log.warning("wandb not installed -- run: pip install wandb  (continuing without tracking)")
+            import wandb as _wandb
+            _wandb.init(
+                project=self._wandb_project,
+                name=self._wandb_run_name,
+                config={
+                    "base_model":    self._model_name,
+                    "epochs":        self._num_epochs,
+                    "batch_size":    self._batch_size,
+                    "lr":            self._lr,
+                    "max_input_len": self._max_input_len,
+                    "max_target_len":self._max_target_len,
+                    "train_samples": len(train_ds),
+                    "val_samples":   len(val_ds),
+                    "grad_accum":    4,
+                },
+                settings=_wandb.Settings(start_method="thread"),
+            )
+            report_to = "wandb"
+            log.info("wandb tracking enabled: project=%s run=%s",
+                     self._wandb_project, self._wandb_run_name or "(auto)")
 
         # Training arguments
         out_path = str(self._ckpt_manager.path)
@@ -428,23 +418,14 @@ class T5Trainer:
         log.info("Training complete. Final metrics: %s", final_metrics)
 
         if report_to == "wandb":
-            try:
-                import wandb as _wandb
-                _wandb.finish()
-            except Exception:
-                pass
+            import wandb as _wandb
+            _wandb.finish()
 
     @staticmethod
     def _check_dependencies() -> None:
-        missing = []
-        for pkg in ["transformers", "torch", "datasets"]:
-            try:
-                __import__(pkg)
-            except ImportError:
-                missing.append(pkg)
-        if missing:
-            log.error("Missing packages: %s\nRun: pip install %s", missing, " ".join(missing))
-            sys.exit(1)
+        import transformers  # noqa: F401
+        import torch  # noqa: F401
+        import datasets  # noqa: F401
 
 
 def _parse_args() -> argparse.Namespace:

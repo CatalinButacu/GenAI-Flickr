@@ -11,12 +11,7 @@ from src.shared.vocabulary import ACTIONS
 
 log = logging.getLogger(__name__)
 
-try:
-    from src.ssm import MotionSSM, PhysicsSSM, SimpleSSMNumpy, HAS_TORCH
-    HAS_SSM = True
-except ImportError:
-    HAS_SSM  = False
-    HAS_TORCH = False
+from src.ssm import MotionSSM, PhysicsSSM, SimpleSSMNumpy, HAS_TORCH
 
 
 @dataclass(slots=True)
@@ -45,10 +40,6 @@ class SSMMotionGenerator(MotionGenerator):
         self._ready    = False
 
     def setup(self) -> bool:
-        if not HAS_SSM:
-            log.warning("SSM module unavailable  falling back to placeholder")
-            self._ready = True
-            return True
         if not HAS_TORCH:
             self._ssm = SimpleSSMNumpy(self._cfg.d_state, self._cfg.d_model, MOTION_DIM)
             self._ready = True

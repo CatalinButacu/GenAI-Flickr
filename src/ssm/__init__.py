@@ -27,12 +27,9 @@ References:
     [3] Motion Mamba: https://arxiv.org/abs/2403.07487
 """
 
-# Check PyTorch availability first
-try:
-    import torch
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+import torch
+
+HAS_TORCH = True
 
 from .core import (
     # Configuration

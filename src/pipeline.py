@@ -18,7 +18,6 @@ class PipelineConfig:
     use_t5_parser: bool = True           # M1: prefer T5 model over rules parser
     use_asset_generation: bool = False   # M3: Shap-E (GPU)
     use_motion_generation: bool = True   # M4: SSM / KIT-ML
-    use_rl_controller: bool = False      # M6: PPO stub
     use_ai_enhancement: bool = False     # M8: ControlNet (GPU)
     use_render_engine: bool = True        # M7: motion blur, DoF, color grade (CPU)
     fps: int = 24
@@ -70,7 +69,7 @@ class Pipeline:
                     log.warning("[%s] disabled: %s", tag, exc)
                     setattr(self.config, _TOGGLE[tag], False)
 
-        log.info("[M5] PhysicsEngine ready | [M6] RLController stub | [M7] RenderEngine stub")
+        log.info("[M5] PhysicsEngine ready | [M7] RenderEngine ready")
         self._is_setup = True
 
     def _init_asset_gen(self) -> None:

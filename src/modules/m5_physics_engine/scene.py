@@ -69,10 +69,10 @@ class Scene:
         self._is_setup = False
     
     def setup(self, use_gui: bool = False) -> bool:
+        import pybullet as p
+        import pybullet_data
+
         try:
-            import pybullet as p
-            import pybullet_data
-            
             mode = p.GUI if use_gui else p.DIRECT
             self.client = p.connect(mode)
             
@@ -87,10 +87,6 @@ class Scene:
             self._is_setup = True
             log.info("Physics scene ready (gravity=%s)", self.gravity)
             return True
-            
-        except ImportError:
-            log.error("PyBullet not installed")
-            return False
         except Exception as e:
             log.error("Scene setup failed: %s", e)
             return False

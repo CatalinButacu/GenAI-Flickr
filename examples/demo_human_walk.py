@@ -202,10 +202,7 @@ def render_skeleton_image(uv: np.ndarray,
     Draw OpenPose-style stick figure on a black canvas.
     Returns uint8 RGB array (H, W, 3).
     """
-    try:
-        import cv2
-    except ImportError as e:
-        raise ImportError("opencv-python is required: pip install opencv-python") from e
+    import cv2
 
     canvas = np.zeros((img_h, img_w, 3), dtype=np.uint8)
 

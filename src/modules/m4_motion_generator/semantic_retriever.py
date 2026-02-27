@@ -43,25 +43,17 @@ class SemanticRetriever(MotionRetriever):
         if not self._samples:
             log.warning("SemanticRetriever: no samples loaded — SBERT skipped")
             return
-        try:
-            from sentence_transformers import SentenceTransformer
+        from sentence_transformers import SentenceTransformer
 
-            self._sbert = SentenceTransformer(_SBERT_MODEL, device=self._device)
-            texts = [s.text for s in self._samples]
-            self._embeddings = self._sbert.encode(
-                texts, convert_to_tensor=True, show_progress_bar=False,
-            )
-            log.info(
-                "SemanticRetriever: indexed %d samples with %s",
-                len(texts), _SBERT_MODEL,
-            )
-        except ImportError:
-            log.warning(
-                "sentence-transformers not installed — "
-                "falling back to keyword retrieval"
-            )
-        except Exception as exc:
-            log.warning("SemanticRetriever SBERT init failed: %s", exc)
+        self._sbert = SentenceTransformer(_SBERT_MODEL, device=self._device)
+        texts = [s.text for s in self._samples]
+        self._embeddings = self._sbert.encode(
+            texts, convert_to_tensor=True, show_progress_bar=False,
+        )
+        log.info(
+            "SemanticRetriever: indexed %d samples with %s",
+            len(texts), _SBERT_MODEL,
+        )
 
     # ------------------------------------------------------------------
     # Public API (overrides MotionRetriever.retrieve)
