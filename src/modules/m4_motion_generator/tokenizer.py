@@ -1,4 +1,17 @@
-"""Shared tokenization for M4 text-to-motion models."""
+"""
+#WHERE
+    Used by ssm_model.py (SSMMotionModel.generate), trainer.py, dataset.py.
+
+#WHAT
+    Text tokenizer for M4 text-to-motion models — maps words to integer IDs
+    using the trained vocabulary, with BOS/EOS/PAD/UNK special tokens.
+
+#INPUT
+    Text string, vocabulary dict, max sequence length.
+
+#OUTPUT
+    List[int] of token IDs with BOS/EOS framing and PAD padding.
+"""
 
 from __future__ import annotations
 

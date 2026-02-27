@@ -1,70 +1,40 @@
 """
-State Space Models (SSM) Module
-===============================
-Provides SSM layers for motion and video generation.
+#WHERE
+    Imported by src/modules/m4_motion_generator (train, ssm_generator),
+    src/pipeline.py, tests/test_modules.py, benchmarks.
 
-This module implements:
-- S4 (Structured State Spaces) - Gu et al., ICLR 2022
-- Mamba (Selective SSMs) - Gu & Dao, 2024
-- MotionSSM - Inspired by Motion Mamba, ECCV 2024
-- PhysicsSSM - Novel physics-constrained SSM (our contribution)
-- TemporalConsistencySSM - For video frame consistency
+#WHAT
+    Public interface for the State Space Models package.
+    Re-exports every SSM component from its dedicated sub-module.
 
-Usage:
-    from src.ssm import MambaLayer, MotionSSM, PhysicsSSM
-    
-    # Create a Mamba layer
-    layer = MambaLayer(SSMConfig(d_model=256))
-    output = layer(input_sequence)
-    
-    # Create physics-aware SSM
-    physics_ssm = PhysicsSSM(d_model=256, d_physics=64)
-    output = physics_ssm(motion, physics_state)
+#INPUT
+    n/a (package init)
 
-References:
-    [1] S4: https://arxiv.org/abs/2111.00396
-    [2] Mamba: https://arxiv.org/abs/2312.00752
-    [3] Motion Mamba: https://arxiv.org/abs/2403.07487
+#OUTPUT
+    All SSM classes, factories, and utilities available via `from src.ssm import ...`
 """
 
 import torch
 
 HAS_TORCH = True
 
-from .core import (
-    # Configuration
-    SSMConfig,
-    
-    # Layers (PyTorch-based)
-    S4Layer,
-    MambaLayer,
-    TemporalConsistencySSM,
-    MotionSSM,
-    PhysicsSSM,
-    
-    # NumPy fallback
-    SimpleSSMNumpy,
-    
-    # Utilities
-    create_ssm_layer,
-    get_ssm_info,
-)
+from .config import SSMConfig
+from .s4 import S4Layer
+from .mamba import MambaLayer
+from .temporal import TemporalConsistencySSM
+from .motion_ssm import MotionSSM
+from .physics_ssm import PhysicsSSM
+from .numpy_ssm import SimpleSSMNumpy
+from .factory import create_ssm_layer, get_ssm_info
 
 __all__ = [
-    # Config
     "SSMConfig",
-    
-    # Layers
     "S4Layer",
-    "MambaLayer", 
+    "MambaLayer",
     "TemporalConsistencySSM",
     "MotionSSM",
     "PhysicsSSM",
-    
-    # Fallback
     "SimpleSSMNumpy",
-    
-    # Utils
     "create_ssm_layer",
     "get_ssm_info",
     "HAS_TORCH",

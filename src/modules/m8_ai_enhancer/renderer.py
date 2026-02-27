@@ -1,4 +1,17 @@
-﻿"""Video renderer with ControlNet depth-conditioned enhancement."""
+﻿"""
+#WHERE
+    Imported by m8_ai_enhancer/__init__.py, pipeline.py.
+
+#WHAT
+    VideoRenderer — legacy depth-conditioned ControlNet enhancement.
+    Generates photorealistic frames from M5 depth maps.
+
+#INPUT
+    List[FrameData] with depth arrays, text prompt, device.
+
+#OUTPUT
+    List[EnhancedFrame] with original + enhanced RGB.
+"""
 
 import os
 import logging

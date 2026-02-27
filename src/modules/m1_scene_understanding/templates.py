@@ -1,3 +1,18 @@
+"""
+#WHERE
+    Imported by reasoner.py to enrich extraction results with implicit entities.
+
+#WHAT
+    Activity templates — predefined scene blueprints (barbecue, classroom,
+    park, living room) with trigger verbs/nouns and implicit entities.
+
+#INPUT
+    None (constant definitions).
+
+#OUTPUT
+    TEMPLATES list of ActivityTemplate instances.
+"""
+
 from .models import ActivityTemplate, EntityType, ImplicitEntity, SpatialHint
 
 TEMPLATES = [

@@ -1,3 +1,18 @@
+"""
+#WHERE
+    Called by orchestrator.py (StoryAgent) between extraction and building.
+
+#WHAT
+    Enriches ExtractionResult with implicit entities from activity templates
+    and knowledge base lookups (spatial hints, default attributes).
+
+#INPUT
+    ExtractionResult from Extractor, KnowledgeRetriever instance.
+
+#OUTPUT
+    Enriched ExtractionResult with additional entities and relations.
+"""
+
 from __future__ import annotations
 
 import logging

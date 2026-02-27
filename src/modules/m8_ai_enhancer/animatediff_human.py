@@ -1,18 +1,16 @@
 """
-AnimateDiff + ControlNet OpenPose  –  Temporally-consistent human video.
+#WHERE
+    Used by pipeline.py as preferred M8 backend for temporally-consistent video.
 
-Architecture
-~~~~~~~~~~~~
-This builds on top of ``controlnet_human.py`` but replaces per-frame
-inference with **batch 8-16 frame generation** using AnimateDiff's
-temporal attention layers.  The key difference:
+#WHAT
+    AnimateDiff + ControlNet OpenPose — batch 8–16 frame generation with
+    temporal attention for flicker-free photorealistic human video.
 
-    Per-frame ControlNet (old):
-        Frame 0 → diffusion → RGB₀
-        Frame 1 → diffusion → RGB₁     ← no awareness of Frame 0!
-        …flickering…
+#INPUT
+    Physics skeleton sequence (T, 21, 3), scene prompt, ControlNet config.
 
-    AnimateDiff + ControlNet (this module):
+#OUTPUT
+    Temporally-consistent photorealistic RGB video frames.
         [Frame 0, Frame 1, …, Frame 7] → diffusion with cross-frame attn → [RGB₀…RGB₇]
         All frames share temporal attention → consistent identity/clothing/skin
 

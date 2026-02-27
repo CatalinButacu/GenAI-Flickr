@@ -1,3 +1,18 @@
+"""
+#WHERE
+    Called by pipeline.py for ML-powered scene understanding.
+
+#WHAT
+    StoryAgent — M1 orchestrator chaining: Extractor → Reasoner →
+    SceneBuilder to produce a rich SceneDescription from text.
+
+#INPUT
+    Text prompt, optional checkpoint path and knowledge base dir.
+
+#OUTPUT
+    SceneDescription with objects, actions, camera, relations.
+"""
+
 from __future__ import annotations
 
 import logging

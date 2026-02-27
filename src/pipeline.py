@@ -1,3 +1,19 @@
+"""
+#WHERE
+    Entry point of the whole system — called by demo.py, demo_v2.py,
+    test_pipeline.py, and run_wrapper.py.
+
+#WHAT
+    End-to-end pipeline: text prompt → M1 parse → M2 plan → M3 assets →
+    M4 motion → M5 physics → M7 render → (optional M8 enhance) → MP4.
+
+#INPUT
+    Text prompt string, PipelineConfig.
+
+#OUTPUT
+    Dict with video path, frame count, per-module timings.
+"""
+
 from __future__ import annotations
 
 import logging

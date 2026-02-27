@@ -1,11 +1,21 @@
-# Physics Engine Module
 """
-This module handles 3D physics simulation using PyBullet.
-It loads 3D models, simulates physics, and renders frames.
+#WHERE
+    Imported by pipeline.py, demo scripts, benchmarks, test_physics_engine.py.
+
+#WHAT
+    Physics Engine Module (Module 5) — PyBullet physics simulation with
+    cinematic camera, humanoid body, motion retargeting, and skeleton rendering.
+
+#INPUT
+    PlannedScene from M2, MotionClip from M4, camera config.
+
+#OUTPUT
+    List[FrameData] with per-frame RGB/depth/seg, or MP4 video.
 """
 
 from .scene import Scene
-from .simulator import Simulator, CameraConfig, CinematicCamera, FrameData
+from .camera import CameraConfig, CinematicCamera, FrameData
+from .simulator import Simulator
 from .humanoid import HumanoidBody, HumanoidConfig, load_humanoid
 from .motion_retarget import retarget_frame, retarget_sequence, pelvis_transform
 from .physics_renderer import (

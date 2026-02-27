@@ -1,3 +1,18 @@
+"""
+#WHERE
+    Used by reasoner.py and orchestrator.py (StoryAgent) for scene enrichment.
+
+#WHAT
+    SBERT + FAISS knowledge retrieval from Visual Genome knowledge base.
+    Retrieves spatial relations, object affordances, and scene context.
+
+#INPUT
+    Text query, top-k count.
+
+#OUTPUT
+    List of dicts with retrieved knowledge triples and similarity scores.
+"""
+
 from __future__ import annotations
 
 import json

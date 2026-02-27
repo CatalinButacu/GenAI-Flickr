@@ -1,7 +1,16 @@
-"""M6: PPO-based RL controller for humanoid motion. Stub — not yet implemented.
+"""
+#WHERE
+    Imported by m6_rl_controller/__init__.py.
 
-Plan: wrap M5 Scene as gymnasium.Env, train with stable-baselines3 PPO.
-Ref: Schulman et al. arXiv:1707.06347
+#WHAT
+    PPO-based RL controller for humanoid motion (stub).
+    Plan: wrap M5 Scene as gymnasium.Env, train with stable-baselines3 PPO.
+
+#INPUT
+    Observation array from M5 physics environment.
+
+#OUTPUT
+    Action vector (joint torques / position targets).
 """
 
 

@@ -1,28 +1,22 @@
 """
-Motion Generator Module (Module 4)
-===================================
-Generates humanoid motion from text descriptions.
+#WHERE
+    Imported by pipeline.py, benchmarks, demo scripts, training scripts.
 
-Backends:
-- "retrieval": Fetch ground truth from KIT-ML dataset (keyword or SBERT semantic)
-- "ssm": Trained State Space Model
-- "placeholder": Simple procedural motion (fallback)
+#WHAT
+    Motion Generator Module (Module 4) — generates humanoid motion from text.
+    Backends: semantic/keyword retrieval, trained SSM, placeholder fallback.
 
-Example:
-    from src.modules.m4_motion_generator import MotionGenerator, MotionClip
-    
-    gen = MotionGenerator()
-    clip = gen.generate("a person walks forward", prefer="retrieval")
-    print(f"Generated {clip.num_frames} frames from {clip.source}")
+#INPUT
+    Text description of a human action (e.g. "a person walks forward").
+
+#OUTPUT
+    MotionClip with (T, 251) HumanML3D features, fps, source tag.
 """
 
-from .generator import (
-    MotionGenerator,
-    MotionClip,
-    MotionRetriever,
-    SSMMotionModel,
-    create_motion_generator,
-)
+from .models import MotionClip
+from .keyword_retriever import MotionRetriever
+from .ssm_model import SSMMotionModel
+from .generator import MotionGenerator, create_motion_generator
 from .semantic_retriever import SemanticRetriever
 from .constants import MOTION_DIM, MOTION_FPS, DEFAULT_DATA_DIR
 

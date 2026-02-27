@@ -1,21 +1,16 @@
-"""M7: Post-processing renderer.
+"""
+#WHERE
+    Used by pipeline.py for final video post-processing, demo scripts.
 
-Applies cinematic effects to raw FrameData from M5 and exports a final MP4.
+#WHAT
+    M7 post-processing renderer — applies cinematic effects (motion blur,
+    DoF, color grading, vignette, film grain) to raw M5 FrameData.
 
-Effects (all individually toggleable via RenderSettings):
-    - Motion blur      — exponential frame accumulation (trailing ghost effect)
-    - Depth of field   — foreground/background blur based on the M5 depth buffer
-    - Color grading    — saturation, contrast, gamma, optional cinematic crush
-    - Vignette         — cosine-falloff corner darkening
-    - Film grain       — subtle additive noise for texture
+#INPUT
+    List[FrameData] with RGB/depth arrays, RenderSettings toggles.
 
-Usage::
-
-    from src.modules.m7_render_engine import RenderEngine, RenderSettings
-
-    settings = RenderSettings(motion_blur=True, dof=True)
-    engine = RenderEngine(settings)
-    engine.render(frames, "outputs/videos/output.mp4", fps=24)
+#OUTPUT
+    MP4 video file with applied post-processing effects.
 """
 from __future__ import annotations
 

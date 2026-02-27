@@ -1,4 +1,17 @@
-"""Physics scene management with Factory pattern for shape creation."""
+"""
+#WHERE
+    Used by simulator.py, physics.py, pipeline.py, test_physics_engine.py.
+
+#WHAT
+    PyBullet physics scene manager with Factory pattern for shape creation.
+    Manages ground plane, collision shapes, and body lifecycle.
+
+#INPUT
+    PlannedEntity list (from M2) with positions, sizes, masses.
+
+#OUTPUT
+    Initialized PyBullet world with body IDs mapped to entity names.
+"""
 
 import os
 import logging

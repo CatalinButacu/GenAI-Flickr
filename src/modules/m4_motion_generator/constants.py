@@ -1,4 +1,18 @@
-"""Shared constants for the M4 motion generator module."""
+"""
+#WHERE
+    Imported by all M4 sub-modules: generator, retriever, ssm_model,
+    tokenizer, dataset, trainer, nn_models, ssm_generator.
+
+#WHAT
+    Shared constants for the M4 motion generator module: feature dims,
+    frame rate, default paths, index actions, special token IDs.
+
+#INPUT
+    None (constant definitions).
+
+#OUTPUT
+    MOTION_DIM, MOTION_FPS, DEFAULT_DATA_DIR, INDEX_ACTIONS, token IDs.
+"""
 
 # KIT-ML / HumanML3D feature vector dimensionality
 MOTION_DIM: int = 251

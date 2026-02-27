@@ -1,12 +1,16 @@
 """
-T5SceneParser — inference wrapper for the fine-tuned flan-T5-small M1 model.
+#WHERE
+    Called by pipeline.py when use_t5_parser=True, and by StoryAgent/orchestrator.
 
-Loads the v5 checkpoint, runs seq2seq inference, post-processes the brace
-substitution, and returns a ``ParsedScene`` compatible with the downstream
-``ScenePlanner`` (M2).
+#WHAT
+    T5SceneParser — fine-tuned flan-T5-small (v5, eval_loss=0.0620) for
+    seq2seq text → JSON scene extraction.  Falls back to PromptParser.
 
-Falls back to the rules-based ``PromptParser`` when the model is unavailable
-or inference fails.
+#INPUT
+    Text prompt string.
+
+#OUTPUT
+    ParsedScene with entities, actions, spatial_relations.
 """
 
 from __future__ import annotations

@@ -1,18 +1,17 @@
 """
-Physics-verified skeleton renderer (M5 + M7 integration)
-=========================================================
+#WHERE
+    Used by pipeline.py (M5+M7 integration) for cinematic skeleton rendering.
 
-After each PyBullet step the physics solver has computed:
-  - gravity effects on every link
-  - ground-contact forces and friction
-  - joint constraint forces and position limits
+#WHAT
+    Physics-verified skeleton renderer — reads 3D joint positions from PyBullet
+    after physics simulation and renders them as a cinematic skeleton overlay
+    (anti-aliased bones, joint circles, bone coloring).
 
-This module reads those physics-computed 3-D world positions back from
-PyBullet and renders them using a cinematic skeleton visualiser instead
-of PyBullet's flat tiny-renderer capsules.
+#INPUT
+    HumanoidBody with link positions, VirtualCamera config, frame size.
 
-The result is *architecturally honest*: the skeleton positions are the
-truth output of the physics engine, not the raw KIT-ML data.
+#OUTPUT
+    RGBA numpy arrays with rendered skeleton frames.
 
 Rendering pipeline per frame
 ----------------------------

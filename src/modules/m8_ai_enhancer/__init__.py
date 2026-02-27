@@ -1,15 +1,16 @@
-# Video Renderer Module
 """
-This module enhances physics simulation renders using AI.
+#WHERE
+    Imported by pipeline.py when use_ai_enhancement=True.
 
-- **AnimateDiffHumanRenderer** — preferred: temporally-consistent video
-  via SD 1.5 + ControlNet OpenPose + AnimateDiff motion adapter.
-  (Guo et al. 2023, arXiv:2307.04725)
+#WHAT
+    AI Enhancer Module (Module 8) — SD 1.5 + ControlNet + AnimateDiff
+    for photorealistic frame/video generation from physics skeletons.
 
-- **ControlNetHumanRenderer** — fallback: per-frame SD 1.5 + ControlNet.
-  Good single frames but flickers between frames.
+#INPUT
+    Physics-verified skeleton frames from M5, scene prompt.
 
-- **VideoRenderer** — legacy depth-conditioned ControlNet.
+#OUTPUT
+    Photorealistic RGB frames/video.
 """
 
 from .renderer import VideoRenderer

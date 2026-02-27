@@ -1,9 +1,18 @@
-"""SBERT-powered semantic retrieval for KIT-ML motion clips.
+"""
+#WHERE
+    Used by generator.py (MotionGenerator._build_retriever) as the
+    preferred retrieval backend when sentence-transformers is available.
 
-Replaces exact-keyword matching with cosine similarity over
-``all-MiniLM-L6-v2`` embeddings (~80 MB), so queries like "stroll",
-"march", or "amble" correctly retrieve the closest ``walk`` clip
-instead of falling through to a random one.
+#WHAT
+    SBERT-powered semantic retrieval for KIT-ML motion clips.
+    Replaces exact-keyword matching with cosine similarity over
+    all-MiniLM-L6-v2 embeddings (~80 MB).
+
+#INPUT
+    Text query (e.g. "stroll", "march"), max frame count.
+
+#OUTPUT
+    MotionClip with the semantically closest KIT-ML sample.
 """
 
 from __future__ import annotations

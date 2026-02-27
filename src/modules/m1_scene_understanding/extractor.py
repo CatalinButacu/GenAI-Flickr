@@ -1,3 +1,18 @@
+"""
+#WHERE
+    Called by orchestrator.py (StoryAgent) as the first ML stage.
+
+#WHAT
+    Extractor — fine-tuned flan-T5-small for entity/action/relation
+    extraction from text prompts.  Produces ExtractionResult.
+
+#INPUT
+    Text prompt string.
+
+#OUTPUT
+    ExtractionResult with entities, actions, relations lists.
+"""
+
 from __future__ import annotations
 
 import json

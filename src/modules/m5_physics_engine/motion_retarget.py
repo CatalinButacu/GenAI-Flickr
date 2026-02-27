@@ -1,18 +1,17 @@
 """
-M5 Motion Retargeting — KIT-ML → PyBullet humanoid
-====================================================
+#WHERE
+    Called by pipeline.py to drive the PyBullet humanoid from KIT-ML data.
 
-Converts raw KIT-ML joint positions (T, 21, 3) in millimetres (Y-up, global
-world space) into PyBullet ``humanoid.urdf`` joint angles (radians) and a
-world-space root transform.
+#WHAT
+    Motion retargeting — converts KIT-ML raw joint positions (T, 21, 3)
+    in mm Y-up to PyBullet joint angles (radians) and root transform.
+    Derived angles become PD-motor targets; PyBullet solves dynamics.
 
-The physics contract
---------------------
-Derived joint angles are applied as **PD-motor position targets** via
-``p.setJointMotorControl2(..., controlMode=p.POSITION_CONTROL, ...)``.
-PyBullet then solves the full rigid-body dynamics each simulation step:
-  * gravity acts on every link
-  * ground-contact forces and friction are computed
+#INPUT
+    Raw joint array (T, 21, 3) mm Y-up, HumanoidBody instance.
+
+#OUTPUT
+    Per-frame joint angle dict, pelvis (position, orientation) transform.
   * joint reaction forces respect the URDF joint limits
   * the resulting motion therefore satisfies Newton's laws
 

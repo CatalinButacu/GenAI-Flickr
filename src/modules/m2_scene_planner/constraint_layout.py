@@ -1,8 +1,16 @@
 """
-Constraint-based spatial layout solver for M2.
+#WHERE
+    Called by planner.py (_try_constraint_solve) when M1 provides relation triples.
 
-Maps M1 relation triples (subject, predicate, object) to 3D position
-constraints and solves for entity positions using scipy.optimize.minimize.
+#WHAT
+    Constraint-based spatial layout solver — maps M1 relation triples to 3D
+    position constraints and solves via scipy.optimize.minimize.
+
+#INPUT
+    List of entity names, list of relation dicts {subject, predicate, object}.
+
+#OUTPUT
+    Dict mapping entity name → (x, y, z) solved position tuple.
 
 Supported spatial predicates:
     on, on top of     → stack vertically (z-axis alignment)

@@ -1,4 +1,20 @@
-﻿from __future__ import annotations
+﻿"""
+#WHERE
+    Used by pipeline.py (fallback when T5 unavailable), benchmarks,
+    t5_parser.py (fallback), test_modules.py.
+
+#WHAT
+    Rule-based NLP parser — regex + vocabulary lookup to extract entities,
+    actions, and spatial relations from a text prompt.
+
+#INPUT
+    Natural language text prompt.
+
+#OUTPUT
+    ParsedScene with ParsedEntity, ParsedAction lists, spatial_relations.
+"""
+
+from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field

@@ -1,4 +1,17 @@
-"""Shared module - Common vocabulary and schemas for all pipeline modules."""
+"""
+#WHERE
+    Imported by every pipeline module (M1–M8) and by tests/benchmarks.
+
+#WHAT
+    Shared vocabulary, action/object registries, color and spatial enums.
+
+#INPUT
+    None (constant registries).
+
+#OUTPUT
+    ACTIONS, OBJECTS dictionaries; ActionDefinition, ObjectDefinition dataclasses;
+    ColorName, SpatialRelation enums; lookup helpers.
+"""
 
 from .vocabulary import (
     # Actions

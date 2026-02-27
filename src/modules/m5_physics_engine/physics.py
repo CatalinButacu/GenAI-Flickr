@@ -1,4 +1,16 @@
-"""M5 Physics Engine: re-exports and vocabulary-aware factory helpers."""
+"""
+#WHERE
+    Convenience re-export — used by test scripts and demo scripts.
+
+#WHAT
+    M5 Physics Engine re-exports and vocabulary-aware factory helpers.
+
+#INPUT
+    Gravity constant (default -9.81).
+
+#OUTPUT
+    Configured Scene, factory helper functions.
+"""
 
 # Re-export existing physics components
 from .scene import Scene, PhysicsObject

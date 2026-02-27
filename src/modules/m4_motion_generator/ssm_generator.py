@@ -1,4 +1,19 @@
-﻿"""SSM-enhanced motion generator: extends MotionGenerator with Mamba-based temporal modeling."""
+﻿"""
+#WHERE
+    Used by pipeline.py for SSM-enhanced motion generation with
+    physics and temporal consistency layers.
+
+#WHAT
+    SSMMotionGenerator — extends MotionGenerator with Mamba-based temporal
+    modeling, physics SSM for constraint enforcement, and temporal SSM for
+    frame-to-frame consistency.
+
+#INPUT
+    Text action description, optional SSM layer type.
+
+#OUTPUT
+    MotionClip with SSM-refined (T, 251) motion features.
+"""
 
 import logging
 import numpy as np

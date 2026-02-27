@@ -1,4 +1,17 @@
-"""Memory profiling utilities for the dissertation pipeline.
+"""
+#WHERE
+    Used by pipeline.py, simulator.py, generator.py, ssm_model.py,
+    and any function decorated with @profile_memory.
+
+#WHAT
+    Memory profiling utilities: tracemalloc_snapshot context manager
+    and @profile_memory decorator for line-by-line RAM tracking.
+
+#INPUT
+    Label string (for snapshots), or function (for decorator).
+
+#OUTPUT
+    Logs memory delta/allocation sites; decorator is transparent.
 
 Two complementary tools:
 

@@ -1,4 +1,19 @@
-﻿"""Central vocabulary for actions, objects, and properties - single source of truth across all modules."""
+﻿"""
+#WHERE
+    Imported by shared/__init__.py → re-exported to all pipeline modules,
+    planner.py, builder.py, prompt_parser.py, ssm_generator.py, physics.py.
+
+#WHAT
+    Single source of truth for action verbs, object types, colors, and
+    spatial relations used across the entire pipeline.
+
+#INPUT
+    None (constant definitions).
+
+#OUTPUT
+    ACTIONS dict, OBJECTS dict, ActionCategory/ObjectCategory/ColorName/
+    SpatialRelation enums, lookup helpers.
+"""
 
 from enum import Enum, auto
 from dataclasses import dataclass, field

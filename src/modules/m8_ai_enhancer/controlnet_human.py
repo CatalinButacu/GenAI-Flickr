@@ -1,18 +1,16 @@
 """
-ControlNet OpenPose human renderer  –  Physics-verified skeleton → photorealistic frames.
+#WHERE
+    Used by pipeline.py as fallback M8 backend (per-frame enhancement).
 
-Architecture
-~~~~~~~~~~~~
-This module sits between the physics engine (M5) and the render engine (M7):
+#WHAT
+    ControlNet OpenPose human renderer — physics-verified skeleton →
+    photorealistic frames via SD 1.5 + ControlNet OpenPose conditioning.
 
-    M5  PyBullet physics step
-     │
-     ▼  get_link_world_positions()  →  21-joint (T, 21, 3) skeleton
-     │
-     ▼  SkeletonProjector  →  OpenPose-style 2-D skeleton image (512×768)
-     │
-     ▼  ControlNetHumanRenderer  →  photorealistic RGB frame  (512×768)
-     │
+#INPUT
+    Physics skeleton (21-joint), scene prompt, ControlNet guidance scale.
+
+#OUTPUT
+    Photorealistic RGB frame per input skeleton pose.
      ▼  M7 RenderEngine  →  colour-grade, vignette, motion blur  →  MP4
 
 The skeleton positions fed into the projector are the *output* of PyBullet,

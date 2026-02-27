@@ -1,4 +1,17 @@
-"""Humanoid body loader and joint controller for PyBullet (M5 extension)."""
+"""
+#WHERE
+    Used by pipeline.py, motion_retarget.py, physics_renderer.py.
+
+#WHAT
+    Humanoid body loader and joint controller for PyBullet.
+    Loads humanoid.urdf, configures joints, provides position control API.
+
+#INPUT
+    URDF path, HumanoidConfig (joint limits, PD gains).
+
+#OUTPUT
+    HumanoidBody with body_id, joint map, and set_joint_positions method.
+"""
 
 import os
 import logging

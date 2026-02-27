@@ -1,18 +1,17 @@
 """
-Physics Adherence Verifier  —  Post-hoc skeleton verification.
+#WHERE
+    Called by pipeline.py after M8 AI enhancement to verify skeleton fidelity.
 
-After ControlNet / AnimateDiff generates a photorealistic frame, this
-module runs MediaPipe Pose on the RGB output to detect the visible
-skeleton, then compares it to the *physics-verified* skeleton that was
-used as conditioning input.
+#WHAT
+    Physics Adherence Verifier — runs MediaPipe Pose on ControlNet/AnimateDiff
+    RGB output and compares detected skeleton against the physics-verified
+    ground truth from PyBullet.
 
-This closes the physics-constraint loop:
+#INPUT
+    RGB frame (from M8), physics skeleton (from M5), confidence threshold.
 
-    Physics skeleton (ground truth)
-         │
-         ├──→ ControlNet conditioning → RGB frame
-         │                                  │
-         │                                  ▼
+#OUTPUT
+    Per-joint error, pass/fail flag, MPJPE metric.
          └──→ compare ←── MediaPipe Pose detection
                   │
                   ▼

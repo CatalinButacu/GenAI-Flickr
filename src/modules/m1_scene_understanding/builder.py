@@ -1,3 +1,18 @@
+"""
+#WHERE
+    Called by orchestrator.py (StoryAgent) to build the final scene.
+
+#WHAT
+    SceneBuilder — converts ExtractionResult into a full SceneDescription
+    with 3D positions, camera defaults, and action mappings.
+
+#INPUT
+    ExtractionResult from Extractor/Reasoner.
+
+#OUTPUT
+    SceneDescription with SceneObject, SceneAction, CameraMotion.
+"""
+
 from __future__ import annotations
 
 import random

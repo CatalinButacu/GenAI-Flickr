@@ -1,10 +1,18 @@
 """
-RL Controller — Module 6  (stub)
-=================================
-PPO-based humanoid motion control.  Not yet implemented.
+#WHERE
+    Imported by pipeline.py (stub — not yet used in production).
 
-See ``controller.py`` for the design plan.
+#WHAT
+    RL Controller Module (Module 6) — PPO-based humanoid motion control.
+    Currently a stub; planned: gymnasium.Env wrapping M5 Scene.
+
+#INPUT
+    Observation from M5 physics env.
+
+#OUTPUT
+    Action vector for humanoid joint torques.
 """
+
 from .controller import RLController
 
 __all__ = ["RLController"]
