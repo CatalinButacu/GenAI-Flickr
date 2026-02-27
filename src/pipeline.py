@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 class PipelineConfig:
     output_dir: str = "outputs"
     assets_dir: str = "assets/objects"
+    use_t5_parser: bool = True           # M1: prefer T5 model over rules parser
     use_asset_generation: bool = False  # M3: Shap-E (GPU)
     use_motion_generation: bool = True   # M4: SSM / KIT-ML
     use_rl_controller: bool = False      # M6: PPO stub
@@ -38,9 +39,22 @@ class Pipeline:
         from src.modules.m1_scene_understanding.prompt_parser import PromptParser
         from src.modules.m2_scene_planner import ScenePlanner
 
-        self._parser = PromptParser()
+        # Prefer T5SceneParser (ML) over PromptParser (rules) when configured
+        if self.config.use_t5_parser:
+            try:
+                from src.modules.m1_scene_understanding.t5_parser import T5SceneParser
+                self._parser = T5SceneParser(device=self.config.device, fallback=True)
+                log.info("[M1] T5SceneParser ready (ML-powered, with rules fallback)")
+            except Exception as exc:
+                log.warning("[M1] T5SceneParser unavailable (%s) — using rules parser", exc)
+                self._parser = PromptParser()
+                log.info("[M1] PromptParser ready (rules-based)")
+        else:
+            self._parser = PromptParser()
+            log.info("[M1] PromptParser ready (rules-based)")
+
         self._planner = ScenePlanner()
-        log.info("[M1] PromptParser ready | [M2] ScenePlanner ready")
+        log.info("[M2] ScenePlanner ready")
 
         _TOGGLE = {
             "M3": "use_asset_generation",

@@ -106,9 +106,21 @@ class Extractor:
             ids = self._model.generate(
                 **inputs, max_length=self._max_output,
                 num_beams=self._num_beams, early_stopping=True,
-                no_repeat_ngram_size=3,
+                # NOTE: no_repeat_ngram_size removed — it corrupts multi-entity JSON
             )
-        return self._tokenizer.decode(ids[0], skip_special_tokens=True)
+        # Decode with skip_special_tokens=False so <extra_id_0/1> survive
+        raw = self._tokenizer.decode(ids[0], skip_special_tokens=False)
+        return self._postprocess(raw)
+
+    @staticmethod
+    def _postprocess(raw: str) -> str:
+        """Reverse the brace substitution and strip leftover special tokens."""
+        raw = raw.replace("<extra_id_0>", "{").replace("<extra_id_1>", "}")
+        for tok in ("</s>", "<pad>", "<s>", "<unk>"):
+            raw = raw.replace(tok, "")
+        import re
+        raw = re.sub(r"<extra_id_\d+>", "", raw)
+        return raw.strip()
 
     def _parse_output(self, prompt: str, raw: str) -> ExtractionResult:
         result = ExtractionResult(raw_prompt=prompt)
@@ -119,13 +131,17 @@ class Extractor:
                 id=e.get("id", f"entity_{len(result.entities)}"),
                 entity_type=_TYPE_MAP.get(e.get("type", "object").lower(), EntityType.OBJECT),
                 name=e.get("name", ""),
-                raw_span=e.get("raw", ""),
+                raw_span=e.get("raw", e.get("name", "")),
                 count=e.get("count", 1),
             )
-            for k, v in e.get("attributes", {}).items():
-                entity.set_attr(k, v, source="ml")
+            # v5 slim schema may omit attributes; old schema uses dict
+            attrs = e.get("attributes", {})
+            if isinstance(attrs, dict):
+                for k, v in attrs.items():
+                    entity.set_attr(k, v, source="ml")
             result.entities.append(entity)
 
+        # Handle both old action format and v5 relation-only format
         for a in data.get("actions", []):
             result.actions.append(ExtractedAction(
                 verb=a.get("verb", ""),
@@ -136,10 +152,27 @@ class Extractor:
             ))
 
         for r in data.get("relations", []):
+            # v5 uses subject/predicate/object; some predicates are action-like
+            predicate = r.get("predicate", "")
             result.relations.append(ExtractedRelation(
-                source_id=r.get("subject", ""),
-                relation=r.get("predicate", ""),
-                target_id=r.get("object", ""),
+                source_id=r.get("subject", r.get("source_id", "")),
+                relation=predicate,
+                target_id=r.get("object", r.get("target_id", "")),
             ))
+            # Promote action-like predicates to actions list as well
+            if predicate in _ACTION_VERBS:
+                result.actions.append(ExtractedAction(
+                    verb=predicate,
+                    actor_id=r.get("subject", ""),
+                    target_id=r.get("object", ""),
+                ))
 
         return result
+
+
+_ACTION_VERBS = frozenset({
+    "kicks", "throws", "pushes", "pulls", "hits", "catches",
+    "chases", "follows", "carries", "lifts", "drops", "holds",
+    "rides", "drives", "flies", "jumps", "runs", "walks",
+    "falls on", "falls onto", "bounces", "rolls", "slides",
+})
