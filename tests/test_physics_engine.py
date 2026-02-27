@@ -22,7 +22,7 @@ class TestEasingFunctions:
         assert EasingFunctions.linear(1) == 1
     
     def test_linear_midpoint(self):
-        assert EasingFunctions.linear(0.5) == 0.5
+        assert EasingFunctions.linear(0.5) == pytest.approx(0.5)
     
     def test_smooth_at_zero(self):
         assert EasingFunctions.smooth(0) == 0
@@ -32,7 +32,7 @@ class TestEasingFunctions:
     
     def test_smooth_midpoint(self):
         # Hermite smoothstep at 0.5: 3*(0.5)^2 - 2*(0.5)^3 = 0.5
-        assert EasingFunctions.smooth(0.5) == 0.5
+        assert EasingFunctions.smooth(0.5) == pytest.approx(0.5)
     
     def test_ease_in_starts_slow(self):
         # Quadratic ease-in: slow at start
@@ -47,7 +47,7 @@ class TestEasingFunctions:
         assert EasingFunctions.apply(1.5, "linear") == 1
     
     def test_apply_unknown_easing_uses_linear(self):
-        assert EasingFunctions.apply(0.5, "unknown") == 0.5
+        assert EasingFunctions.apply(0.5, "unknown") == pytest.approx(0.5)
 
 
 class TestCinematicCamera:
@@ -56,7 +56,7 @@ class TestCinematicCamera:
         self.camera = CinematicCamera(target=[0, 0, 0.5], distance=2.0, yaw=0, pitch=-30)
     
     def test_initial_values(self):
-        assert self.camera.current_distance == 2.0
+        assert self.camera.current_distance == pytest.approx(2.0)
         assert self.camera.current_yaw == 0
         assert self.camera.current_pitch == -30
     
@@ -79,13 +79,13 @@ class TestCinematicCamera:
     def test_zoom_updates_distance(self):
         self.camera.add_zoom(start_dist=2.0, end_dist=1.0, start_time=0, duration=1.0)
         self.camera.update(1.0)
-        assert self.camera.current_distance == 1.0
+        assert self.camera.current_distance == pytest.approx(1.0)
     
     def test_get_camera_params(self):
         yaw, pitch, dist, target = self.camera.get_camera_params()
         assert yaw == 0
         assert pitch == -30
-        assert dist == 2.0
+        assert dist == pytest.approx(2.0)
         assert target == [0, 0, 0.5]
     
     def test_to_config_returns_camera_config(self):
@@ -101,13 +101,13 @@ class TestCameraConfig:
         config = CameraConfig()
         assert config.width == 640
         assert config.height == 480
-        assert config.fov == 60.0
+        assert config.fov == pytest.approx(60.0)
     
     def test_custom_values(self):
         config = CameraConfig(width=1920, height=1080, fov=90.0)
         assert config.width == 1920
         assert config.height == 1080
-        assert config.fov == 90.0
+        assert config.fov == pytest.approx(90.0)
 
 
 class TestPhysicsObject:
@@ -115,7 +115,7 @@ class TestPhysicsObject:
     def test_default_values(self):
         obj = PhysicsObject(name="test")
         assert obj.body_id == -1
-        assert obj.mass == 1.0
+        assert obj.mass == pytest.approx(1.0)
         assert obj.is_static == False
     
     def test_custom_values(self):
@@ -124,5 +124,5 @@ class TestPhysicsObject:
         )
         assert obj.name == "heavy"
         assert obj.body_id == 5
-        assert obj.mass == 10.0
+        assert obj.mass == pytest.approx(10.0)
         assert obj.is_static == True

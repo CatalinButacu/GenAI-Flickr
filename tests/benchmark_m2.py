@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.modules.m1_scene_understanding.prompt_parser import PromptParser
 from src.modules.m2_scene_planner import ScenePlanner, PlannedScene, PlannedEntity, Position3D
 
+_A_BALL = "A ball"
+
 
 class M2Benchmark:
     def __init__(self):
@@ -44,12 +46,12 @@ class M2Benchmark:
         print("-" * 50)
         
         # Basic positioning
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         has_pos = all(e.position is not None for e in s.entities)
         self.test("1. Position assigned", has_pos)
         
         # Above ground
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         ball = [e for e in s.entities if "sphere" in e.object_type]
         above = ball and ball[0].position.z >= 0
         self.test("2. Above ground (z>=0)", above)
@@ -62,7 +64,7 @@ class M2Benchmark:
         
         # Three objects spread
         s = self.plan("A ball, a cube, and a cylinder")
-        spread = len(s.entities) >= 3 and len(set(str(e.position.to_list()) for e in s.entities)) >= 3
+        spread = len(s.entities) >= 3 and len({str(e.position.to_list()) for e in s.entities}) >= 3
         self.test("4. Three objects spread", spread, f"entities={len(s.entities)}")
         
         # Actor vs object positions
@@ -79,7 +81,7 @@ class M2Benchmark:
         self.test("6. Humanoid reasonable z", tall)
         
         # Small object positioning
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         ball = [e for e in s.entities if "sphere" in e.object_type]
         close = ball and abs(ball[0].position.x) < 5 and abs(ball[0].position.y) < 5
         self.test("7. Object in scene bounds", close)
@@ -113,7 +115,7 @@ class M2Benchmark:
         self.test("12. Blue color preserved", has_color)
         
         # Mass assignment
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         ball = [e for e in s.entities if "sphere" in e.object_type]
         has_mass = ball and ball[0].mass > 0
         self.test("13. Mass assigned", has_mass, f"mass={ball[0].mass if ball else 0}")
@@ -151,12 +153,12 @@ class M2Benchmark:
         print("-" * 50)
         
         # Ground size
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         has_ground = s.ground_size is not None and s.ground_size[0] > 0
         self.test("19. Ground size set", has_ground)
         
         # Camera distance
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         has_cam = s.camera_distance > 0
         self.test("20. Camera distance set", has_cam)
         
@@ -167,17 +169,17 @@ class M2Benchmark:
         self.test("21. Rotation assigned", has_rot)
         
         # Entity list not empty
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         self.test("22. Entities list populated", len(s.entities) > 0)
         
         # PlannedEntity attributes
-        s = self.plan("A ball")
+        s = self.plan(_A_BALL)
         e = s.entities[0]
         has_all = hasattr(e, 'name') and hasattr(e, 'position') and hasattr(e, 'mass')
         self.test("23. PlannedEntity attributes", has_all)
         
         # Empty prompt handling
-        s = self.plan("")
+        self.plan("")
         no_crash = True  # If we get here, no crash
         self.test("24. Empty prompt handling", no_crash)
         

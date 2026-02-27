@@ -46,7 +46,7 @@ check("1. Extractor() instantiates",          ex is not None)
 check("2. is_loaded starts False",            ex.is_loaded == False)
 check("3. checkpoint_path returns Path",      isinstance(ex.checkpoint_path, Path))
 check("4. checkpoint_path setter invalidates", (setattr(ex, 'checkpoint_path', 'new/path') or ex.is_loaded) == False)
-check("5. device setter validates",           (lambda: (_ for _ in ()).throw(ValueError()) if True else False) or True)
+check("5. device setter validates",           True)
 try:
     ex.device = "invalid"
     check("5. device setter rejects invalid", False)

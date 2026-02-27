@@ -50,7 +50,7 @@ class TrainAction:
 class TrainRelation:
     subject: str
     predicate: str
-    object: str                   # noqa: A003 (shadows built-in, intentional for JSON key)
+    object: str  # NOSONAR - shadows built-in, intentional for JSON key
 
 @dataclass
 class TrainSample:
@@ -183,60 +183,71 @@ def _indef(noun: str) -> str:
 # ---------------------------------------------------------------------------
 
 class TargetBuilder:
-    """Converts a VG scene graph into the structured JSON the T5 must produce."""
+    """
+    Converts a VG scene graph into a SLIM structured JSON the T5 must produce.
 
-    # VG predicates that correspond to actions/motions (not static spatial rels)
-    ACTION_PREDICATES = {
-        "holding", "wearing", "eating", "riding", "carrying",
-        "walking", "running", "sitting", "standing", "looking at",
-        "throwing", "catching", "kicking", "pushing", "pulling",
-        "hitting", "touching", "waving", "playing", "driving",
-    }
+    Schema (intentionally minimal so targets stay < 128 tokens):
+      {"entities": [{"name": "...", "type": "..."},...],
+       "relations": [{"subject": "...", "predicate": "...", "object": "..."},...] }
+
+    Dropped vs verbose schema: id, count, attributes, actions.
+    Reason: average target with full schema was 789 tokens (p90=973), far
+    exceeding flan-T5-small's 512-token decoder limit.  The slim schema
+    produces ~60-120 tokens, fitting comfortably within 256.
+    """
+
+    # Map VG object category words to entity types
+    _PERSON_WORDS  = {"person", "man", "woman", "boy", "girl", "child",
+                      "people", "player", "rider", "driver", "passenger"}
+    _ANIMAL_WORDS  = {"dog", "cat", "horse", "cow", "bird", "elephant",
+                      "bear", "sheep", "giraffe", "zebra", "animal"}
+    _VEHICLE_WORDS = {"car", "truck", "bus", "train", "bike", "bicycle",
+                      "motorcycle", "plane", "boat", "vehicle"}
+
+    def _entity_type(self, name: str) -> str:
+        n = name.lower()
+        if n in self._PERSON_WORDS:  return "person"
+        if n in self._ANIMAL_WORDS:  return "animal"
+        if n in self._VEHICLE_WORDS: return "vehicle"
+        return "object"
 
     def build(self, graph: VGSceneGraph, obj_id_to_name: Dict[int, str]) -> str:
+        # --- entities: just name + type, deduped, max 8 ---
+        seen_names: set = set()
         entities: List[dict] = []
-        actions:  List[dict] = []
-        relations: List[dict] = []
-
-        seen_ids: set = set()
-
-        # Build entities from objects
         for obj in graph.objects:
             oid  = obj.get("object_id", -1)
             name = obj_id_to_name.get(oid, "")
-            if not name or oid in seen_ids:
+            if not name or name in seen_names:
                 continue
-            seen_ids.add(oid)
-            ent = TrainEntity(id=f"obj_{oid}", name=name)
-            # Attach attributes
-            sg = VGSceneGraph({})  # reuse attribute extractor statically
-            ent.attributes = VGSceneGraph(obj).get_object_attributes(obj)
-            entities.append(_clean(asdict(ent)))
+            seen_names.add(name)
+            entities.append({"name": name, "type": self._entity_type(name)})
+            if len(entities) >= 5:
+                break
 
-        # Build actions + relations from relationships
+        # --- relations: subject/predicate/object by NAME (not id), max 4 ---
+        relations: List[dict] = []
+        seen_rels: set = set()
         for rel in graph.relationships:
             pred = rel.get("predicate", "").strip().lower()
             sid  = rel.get("subject_id", -1)
             oid  = rel.get("object_id",  -1)
             s    = obj_id_to_name.get(sid, "")
             o    = obj_id_to_name.get(oid, "")
-            if not s or not o:
+            if not s or not o or not pred:
                 continue
+            key = (s, pred, o)
+            if key in seen_rels:
+                continue
+            seen_rels.add(key)
+            relations.append({"subject": s, "predicate": pred, "object": o})
+            if len(relations) >= 4:
+                break
 
-            if pred in self.ACTION_PREDICATES:
-                actions.append(asdict(TrainAction(
-                    verb=pred, actor=f"obj_{sid}", target=f"obj_{oid}"
-                )))
-            else:
-                relations.append(asdict(TrainRelation(
-                    subject=f"obj_{sid}", predicate=pred, object=f"obj_{oid}"
-                )))
-
-        return json.dumps({
-            "entities":  entities[:10],
-            "actions":   actions[:5],
-            "relations": relations[:8],
-        }, ensure_ascii=False)
+        return json.dumps(
+            {"entities": entities, "relations": relations},
+            ensure_ascii=False, separators=(", ", ": "),
+        )
 
 
 def _clean(d: dict) -> dict:
@@ -299,6 +310,35 @@ class VGDatasetBuilder:
         self._splitter   = DatasetSplitter()
         self._writer     = JsonlWriter()
 
+    def _build_obj_id_map(self, graph: "VGSceneGraph") -> "Dict[int, str]":
+        obj_id_map: Dict[int, str] = {}
+        for obj in graph.objects:
+            name = graph.get_object_name(obj)
+            if name and name != "unknown":
+                obj_id_map[obj.get("object_id", -1)] = name
+        return obj_id_map
+
+    def _try_build_sample(self, entry: dict) -> "Optional[TrainSample]":
+        """Return a TrainSample if the entry is valid, None to skip."""
+        graph = VGSceneGraph(entry)
+        obj_id_map = self._build_obj_id_map(graph)
+        if not obj_id_map:
+            return None
+        prompt_text = self._prompt_gen.generate(graph, obj_id_map)
+        if not prompt_text or len(prompt_text) < 10:
+            return None
+        target_json = self._target_bld.build(graph, obj_id_map)
+        try:
+            parsed = json.loads(target_json)
+            if not parsed.get("entities"):
+                return None
+        except json.JSONDecodeError:
+            return None
+        return TrainSample(
+            input=f"extract scene: {prompt_text}",
+            target=target_json,
+        )
+
     def run(self) -> None:
         log.info("Loading scene_graphs.json (~739 MB) — this may take 30–60 s …")
         sg_path = self._vg_dir / "scene_graphs.json"
@@ -317,40 +357,11 @@ class VGDatasetBuilder:
         for entry in raw:
             if len(samples) >= self._max:
                 break
-            graph = VGSceneGraph(entry)
-
-            # Build object-id → canonical name map
-            obj_id_map: Dict[int, str] = {}
-            for obj in graph.objects:
-                name = graph.get_object_name(obj)
-                if name and name != "unknown":
-                    obj_id_map[obj.get("object_id", -1)] = name
-
-            if not obj_id_map:
+            sample = self._try_build_sample(entry)
+            if sample is None:
                 skipped += 1
-                continue
-
-            prompt_text = self._prompt_gen.generate(graph, obj_id_map)
-            if not prompt_text or len(prompt_text) < 10:
-                skipped += 1
-                continue
-
-            target_json = self._target_bld.build(graph, obj_id_map)
-
-            # Validate JSON
-            try:
-                parsed = json.loads(target_json)
-                if not parsed.get("entities"):
-                    skipped += 1
-                    continue
-            except json.JSONDecodeError:
-                skipped += 1
-                continue
-
-            samples.append(TrainSample(
-                input=f"extract scene: {prompt_text}",
-                target=target_json,
-            ))
+            else:
+                samples.append(sample)
 
         log.info("Built %d valid samples (%d skipped).", len(samples), skipped)
 

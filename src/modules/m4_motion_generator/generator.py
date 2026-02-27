@@ -8,18 +8,21 @@ from typing import Optional
 
 import numpy as np
 
+from src.shared.mem_profile import profile_memory
+
 log = logging.getLogger(__name__)
 
 _INDEX_ACTIONS = ["walk", "run", "jump", "kick", "turn", "wave",
                   "sit", "stand", "throw", "punch", "dance", "step"]
 
 
-@dataclass(slots=True)
+@dataclass
 class MotionClip:
     action: str
-    frames: np.ndarray
+    frames: np.ndarray          # (T, 251) HumanML3D feature vectors
     fps: int    = 20
     source: str = "generated"
+    raw_joints: "np.ndarray | None" = None  # (T, 21, 3) mm Y-up — for physics retargeting
 
     @property
     def duration(self) -> float:
@@ -36,6 +39,7 @@ class MotionRetriever:
     def __init__(self, data_dir: str = "data/KIT-ML"):
         self._index: dict[str, list] = {}
         self._samples: list = []
+        self._data_dir = data_dir
         self._load(data_dir)
 
     def _load(self, data_dir: str) -> None:
@@ -54,13 +58,30 @@ class MotionRetriever:
 
     def retrieve(self, text: str, max_frames: int = 200) -> Optional[MotionClip]:
         tl = text.lower()
+        sample = None
         for act, samples in self._index.items():
             if act in tl:
-                s = random.choice(samples)
-                return MotionClip(action=text, frames=s.motion[:max_frames], source="retrieved")
-        if self._samples:
-            s = random.choice(self._samples)
-            return MotionClip(action=text, frames=s.motion[:max_frames], source="retrieved")
+                sample = random.choice(samples)
+                break
+        if sample is None and self._samples:
+            sample = random.choice(self._samples)
+        if sample is None:
+            return None
+        raw = self._load_raw_joints(sample.sample_id, max_frames)
+        return MotionClip(action=text, frames=sample.motion[:max_frames],
+                          source="retrieved", raw_joints=raw)
+
+    def _load_raw_joints(self, sample_id: str, max_frames: int) -> "np.ndarray | None":
+        """Load (T, 21, 3) raw joint positions from new_joints/ if available."""
+        import pathlib
+        candidates = [
+            pathlib.Path(self._data_dir) / "new_joints" / f"{sample_id}.npy",
+        ]
+        for p in candidates:
+            if p.exists():
+                arr = np.load(p)
+                if arr.ndim == 3 and arr.shape[1] == 21:
+                    return arr[:max_frames]
         return None
 
 
@@ -98,6 +119,7 @@ class SSMMotionModel:
         tokens += [0] * (max_len - len(tokens))
         return torch.tensor(tokens[:max_len], dtype=torch.long).unsqueeze(0)
 
+    @profile_memory
     def generate(self, text: str, num_frames: int = 100) -> Optional[MotionClip]:
         if not self.model:
             return None
@@ -124,6 +146,7 @@ class MotionGenerator:
         self._retriever = MotionRetriever(data_dir) if use_retrieval else None
         self._ssm       = SSMMotionModel(checkpoint_path) if use_ssm else None
 
+    @profile_memory
     def generate(self, text: str, num_frames: int = 100, prefer: str = "retrieval") -> MotionClip:
         if prefer == "retrieval" and self._retriever:
             if clip := self._retriever.retrieve(text, num_frames):

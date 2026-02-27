@@ -23,7 +23,7 @@ class SceneExtractionDataset:
     Each line: {"input": "extract scene: ...", "target": "{...json...}"}
     """
 
-    def __init__(self, jsonl_path: Path, tokenizer, max_input: int = 256, max_target: int = 512):
+    def __init__(self, jsonl_path: Path, tokenizer, max_input: int = 256, max_target: int = 256):
         self._path        = jsonl_path
         self._tokenizer   = tokenizer
         self._max_input   = max_input
@@ -71,6 +71,93 @@ class SceneExtractionDataset:
         return model_inputs
 
 
+class LengthValidator:
+    """
+    Scans a JSONL dataset and checks that the chosen max_target will not
+    silently truncate too many training labels.
+
+    Rules enforced before training starts:
+      - WARN  if > 5% of labels would be truncated
+      - ERROR if > 20% of labels would be truncated (aborts training)
+      - Auto-suggests the p99 token length as recommended max_target
+    """
+
+    WARN_THRESHOLD  = 0.05   # 5%
+    ERROR_THRESHOLD = 0.20   # 20%
+    CHECK_SAMPLES   = 2000   # scan first N samples (fast)
+
+    def __init__(self, tokenizer) -> None:
+        self._tok = tokenizer
+
+    def validate(self, jsonl_path: Path, max_target: int) -> int:
+        """
+        Validate label lengths in jsonl_path against max_target.
+        Returns the recommended max_target (p99 of observed lengths).
+        Exits with sys.exit(1) if truncation exceeds ERROR_THRESHOLD.
+        """
+        if not jsonl_path.exists():
+            return max_target
+
+        lengths = []
+        with open(jsonl_path, encoding="utf-8") as f:
+            for i, line in enumerate(f):
+                if i >= self.CHECK_SAMPLES:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                ids = self._tok(
+                    SceneExtractionDataset._sub_braces(rec["target"]),
+                    truncation=False,
+                ).input_ids
+                lengths.append(len(ids))
+
+        if not lengths:
+            return max_target
+
+        lengths.sort()
+        n          = len(lengths)
+        mean_len   = sum(lengths) / n
+        p90        = lengths[int(n * 0.90)]
+        p99        = lengths[int(n * 0.99)]
+        truncated  = sum(1 for l in lengths if l > max_target)
+        trunc_rate = truncated / n
+        recommended = p99
+
+        log.info(
+            "Label length stats (%d samples): mean=%.0f  p90=%d  p99=%d  max=%d",
+            n, mean_len, p90, p99, lengths[-1],
+        )
+        log.info(
+            "Truncation at max_target=%d: %.1f%% of labels truncated (%d/%d)",
+            max_target, trunc_rate * 100, truncated, n,
+        )
+
+        if trunc_rate > self.ERROR_THRESHOLD:
+            log.error(
+                "TRAINING ABORTED: %.0f%% of labels would be truncated at "
+                "max_target=%d. Recommended max_target is %d (p99). "
+                "Re-run with --max-target %d or rebuild the dataset with "
+                "scripts/build_vg_dataset.py to use the slim schema.",
+                trunc_rate * 100, max_target, recommended, recommended,
+            )
+            sys.exit(1)
+        elif trunc_rate > self.WARN_THRESHOLD:
+            log.warning(
+                "%.0f%% of labels will be truncated at max_target=%d. "
+                "Consider --max-target %d to capture p99.",
+                trunc_rate * 100, max_target, recommended,
+            )
+        else:
+            log.info(
+                "Truncation check passed: only %.1f%% of labels exceed max_target=%d.",
+                trunc_rate * 100, max_target,
+            )
+
+        return recommended
+
+
 class SceneExtractionMetrics:
     """BLEU-4, ROUGE-L, Entity F1, JSON syntax rate."""
 
@@ -112,9 +199,9 @@ class SceneExtractionMetrics:
             refs_tok  = [[ref.split()] for ref in label_strs]
             preds_tok = [pred.split() for pred in predictions]
             sf = SmoothingFunction().method1
-            metrics["bleu_4"] = corpus_bleu(refs_tok, preds_tok,
+            metrics["bleu_4"] = float(corpus_bleu(refs_tok, preds_tok,  # type: ignore[arg-type]
                                              weights=(0.25, 0.25, 0.25, 0.25),
-                                             smoothing_function=sf)
+                                             smoothing_function=sf))
         except ImportError:
             log.warning("nltk not installed — skipping BLEU-4")
 
@@ -135,7 +222,7 @@ class SceneExtractionMetrics:
         try:
             json.loads(s)
             return True
-        except (json.JSONDecodeError, ValueError):
+        except ValueError:
             return False
 
     @staticmethod
@@ -193,6 +280,8 @@ class T5Trainer:
         max_input_len: int,
         max_target_len: int,
         resume_from: Optional[str] = None,
+        wandb_project: Optional[str] = None,
+        wandb_run_name: Optional[str] = None,
     ) -> None:
         self._model_name     = model_name
         self._data_dir       = data_dir
@@ -204,6 +293,8 @@ class T5Trainer:
         self._max_input_len  = max_input_len
         self._max_target_len = max_target_len
         self._resume_from    = resume_from
+        self._wandb_project  = wandb_project
+        self._wandb_run_name = wandb_run_name
 
     def run(self) -> None:
         self._check_dependencies()
@@ -233,6 +324,11 @@ class T5Trainer:
         # DO NOT call model.to(device) here! HuggingFace Trainer does it internally.
         # Moving it early causes DataCollator to generate decoder tensors on CUDA in DataLoader CPU threads, crashing Windows silently.
 
+        # --- Pre-training sanity check: label length vs max_target ---
+        validator = LengthValidator(tokenizer)
+        validator.validate(self._data_dir / "train.jsonl", self._max_target_len)
+        # (exits with error if >20% truncated, warns if >5%)
+
         # Load datasets
         train_ds = SceneExtractionDataset(
             self._data_dir / "train.jsonl", tokenizer,
@@ -243,8 +339,35 @@ class T5Trainer:
             self._max_input_len, self._max_target_len,
         ).load()
 
-        metrics_computer = SceneExtractionMetrics(tokenizer)
         collator = DataCollatorForSeq2Seq(tokenizer, model=model, padding=True)
+
+        # --- Optional wandb tracking ---
+        report_to = "none"
+        if self._wandb_project:
+            try:
+                import wandb  # noqa: F401
+                import wandb as _wandb
+                _wandb.init(
+                    project=self._wandb_project,
+                    name=self._wandb_run_name,
+                    config={
+                        "base_model":    self._model_name,
+                        "epochs":        self._num_epochs,
+                        "batch_size":    self._batch_size,
+                        "lr":            self._lr,
+                        "max_input_len": self._max_input_len,
+                        "max_target_len":self._max_target_len,
+                        "train_samples": len(train_ds),
+                        "val_samples":   len(val_ds),
+                        "grad_accum":    4,
+                    },
+                    settings=_wandb.Settings(start_method="thread"),
+                )
+                report_to = "wandb"
+                log.info("wandb tracking enabled: project=%s run=%s",
+                         self._wandb_project, self._wandb_run_name or "(auto)")
+            except ImportError:
+                log.warning("wandb not installed -- run: pip install wandb  (continuing without tracking)")
 
         # Training arguments
         out_path = str(self._ckpt_manager.path)
@@ -257,16 +380,19 @@ class T5Trainer:
             learning_rate=self._lr,
             warmup_ratio=0.05,
             weight_decay=0.01,
-            eval_strategy="no",
+            eval_strategy="epoch",                      # validate every epoch (needed for best-model tracking + wandb curves)
             save_strategy="epoch",
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_loss",
+            greater_is_better=False,
             predict_with_generate=False,                # CRITICAL FIX: True causes silent CUDNN crashes on RTX Windows systems with T5
             generation_max_length=self._max_target_len,
             generation_num_beams=1,                     # greedy during training eval (fast)
             fp16=False,                                 # causes NaN with T5 often natively in torch
             bf16=False,                                 # RTX 3050 does not fully support bfloat16, causing silent crashes
             logging_steps=50,
-            report_to="none",
-            save_total_limit=2,
+            report_to=report_to,
+            save_total_limit=3,
             dataloader_num_workers=0,                   # MUST BE 0 on Windows T5 Trainer to prevent multiprocessing hangs
             dataloader_pin_memory=False,                # CRITICAL: True causes silent Windows OOM driver crash with T5
             max_steps=self._max_steps if self._max_steps > 0 else -1,
@@ -275,8 +401,8 @@ class T5Trainer:
         trainer = Seq2SeqTrainer(
             model=model,
             args=training_args,
-            train_dataset=train_ds,
-            eval_dataset=val_ds,
+            train_dataset=train_ds,  # type: ignore[arg-type]
+            eval_dataset=val_ds,      # type: ignore[arg-type]
             data_collator=collator,
             processing_class=tokenizer,
         )
@@ -301,6 +427,13 @@ class T5Trainer:
         })
         log.info("Training complete. Final metrics: %s", final_metrics)
 
+        if report_to == "wandb":
+            try:
+                import wandb as _wandb
+                _wandb.finish()
+            except Exception:
+                pass
+
     @staticmethod
     def _check_dependencies() -> None:
         missing = []
@@ -324,9 +457,16 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--lr",          type=float, default=5e-5)
     p.add_argument("--max-steps",   type=int, default=0,                   help="If > 0, overrides epochs (useful for smoke tests, e.g. --max-steps 10)")
     p.add_argument("--max-input",     type=int, default=256)
-    p.add_argument("--max-target",    type=int, default=256)
+    p.add_argument("--max-target",    type=int, default=256,
+                   help="Max decoder tokens. Must cover p99 of your label lengths. "
+                        "Run build_vg_dataset.py with the slim schema to keep this "
+                        "well under 256. Training aborts if >20%% of labels are truncated.")
     p.add_argument("--resume-from",   default=None,
                    help="Path to a HuggingFace checkpoint dir to resume from (e.g. m1_checkpoints/m1_scene_extractor/checkpoint-15)")
+    p.add_argument("--wandb-project",  default=None,
+                   help="wandb project name. Enables experiment tracking. E.g. --wandb-project m1-scene-extractor")
+    p.add_argument("--wandb-run",      default=None,
+                   help="wandb run name (auto-generated if omitted)")
     return p.parse_args()
 
 
@@ -343,5 +483,7 @@ if __name__ == "__main__":
         max_input_len=args.max_input,
         max_target_len=args.max_target,
         resume_from=args.resume_from,
+        wandb_project=args.wandb_project,
+        wandb_run_name=args.wandb_run,
     )
     trainer.run()

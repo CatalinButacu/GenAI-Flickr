@@ -18,9 +18,9 @@ def test_all():
     print("[1] Shared Vocabulary...")
     try:
         from src.shared.vocabulary import ACTIONS, OBJECTS, get_action_by_keyword
-        action = get_action_by_keyword("walk")
+        get_action_by_keyword("walk")
         results.append(("Shared Vocabulary", True, f"{len(ACTIONS)} actions, {len(OBJECTS)} objects"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Shared Vocabulary", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -33,7 +33,7 @@ def test_all():
         parser.setup()
         parsed = parser.parse("A person walks to a ball")
         results.append(("Prompt Parser", True, f"{len(parsed.entities)} entities, {len(parsed.actions)} actions"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Prompt Parser", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -45,7 +45,7 @@ def test_all():
         planner = ScenePlanner()
         planned = planner.plan(parsed)
         results.append(("Scene Planner", True, f"{len(planned.entities)} positioned"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Scene Planner", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -58,7 +58,7 @@ def test_all():
         gen.setup()
         clip = gen.generate("walk", duration=1.0)
         results.append(("Motion Generator", True, f"{len(clip.frames)} frames"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Motion Generator", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -71,7 +71,7 @@ def test_all():
         gen.setup()
         clip = gen.generate("walk", duration=1.0)
         results.append(("SSM Motion Generator", True, f"{len(clip.frames)} SSM frames"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("SSM Motion Generator", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -86,7 +86,7 @@ def test_all():
         scene.add_primitive("test_ball", "sphere", 0.1, 1.0, [0, 0, 1])
         scene.cleanup()
         results.append(("Physics Engine", True, "Scene created"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Physics Engine", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -96,7 +96,7 @@ def test_all():
     try:
         from src.modules.m5_physics_engine.humanoid import HumanoidBody
         results.append(("Humanoid Body", True, "Import OK"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Humanoid Body", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -108,7 +108,7 @@ def test_all():
         info = get_ssm_info()
         layers = len(info["layers"])
         results.append(("SSM Module", True, f"{layers} layers, torch={info['torch_available']}"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("SSM Module", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -126,7 +126,7 @@ def test_all():
         pipeline = Pipeline(config)
         pipeline.setup()
         results.append(("Pipeline Setup", True, "All modules ready"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Pipeline Setup", False, str(e)))
         print(f"    ✗ FAIL - {e}")
@@ -137,7 +137,7 @@ def test_all():
         result = pipeline.run("A red ball falls on blue cube", output_name="test")
         n_frames = len(result["physics_frames"])
         results.append(("Full Pipeline", True, f"{n_frames} frames, video saved"))
-        print(f"    ✓ PASS")
+        print("    ✓ PASS")
     except Exception as e:
         results.append(("Full Pipeline", False, str(e)))
         print(f"    ✗ FAIL - {e}")

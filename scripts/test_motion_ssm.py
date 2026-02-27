@@ -76,7 +76,7 @@ class MotionInference:
             mean = np.load("data/KIT-ML/Mean.npy")
             std = np.load("data/KIT-ML/Std.npy")
             motion_denorm = motion * (std + 1e-8) + mean
-        except:
+        except Exception:
             motion_denorm = motion
         
         return {

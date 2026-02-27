@@ -102,7 +102,7 @@ class PromptParser:
             obj_def = OBJECTS.get(obj_type)
             is_actor = bool(obj_def and obj_def.category == ObjectCategory.HUMANOID)
             color = color_ctx.get(kw)
-            prefix = _RGBA_TO_NAME.get(color, "")
+            prefix = _RGBA_TO_NAME.get(color) if color else ""
             name = f"{prefix}_{obj_type}".strip("_") if prefix else obj_type
             entities.append(ParsedEntity(name=name, object_type=obj_type, is_actor=is_actor, color=color))
         return entities
@@ -121,6 +121,16 @@ class PromptParser:
                     break
         return result
 
+    def _actor_target(self, act_def, actors: list, objects: list) -> "tuple[str, str]":
+        """Resolve actor and target names for an action definition."""
+        if act_def.category != ActionCategory.PHYSICS:
+            actor  = actors[0] if actors else ""
+            target = objects[0] if objects and act_def.requires_target else ""
+        else:
+            actor  = objects[0] if objects else ""
+            target = objects[1] if len(objects) > 1 and act_def.requires_target else ""
+        return actor, target
+
     def _extract_actions(self, text: str, entities: List[ParsedEntity]) -> List[ParsedAction]:
         actors  = [e.name for e in entities if e.is_actor]
         objects = [e.name for e in entities if not e.is_actor]
@@ -134,12 +144,7 @@ class PromptParser:
                 continue
             seen.add(act_type)
             act_def = ACTIONS[act_type]
-            if act_def.category != ActionCategory.PHYSICS:
-                actor  = actors[0]  if actors  else ""
-                target = objects[0] if objects and act_def.requires_target else ""
-            else:
-                actor  = objects[0] if objects else ""
-                target = objects[1] if len(objects) > 1 and act_def.requires_target else ""
+            actor, target = self._actor_target(act_def, actors, objects)
             actions.append(ParsedAction(action_type=act_type, actor=actor, target=target))
         return actions
 

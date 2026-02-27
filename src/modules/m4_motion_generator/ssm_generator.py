@@ -62,8 +62,8 @@ class SSMMotionGenerator(MotionGenerator):
             return True
         except Exception as e:
             log.error("SSM setup failed: %s", e)
-            self._ready = True
-            return True
+            self._ready = False
+            return False
 
     def generate(self, text: str, num_frames: int = 100, prefer: str = "ssm",
                  physics_state: Optional[np.ndarray] = None) -> MotionClip:
@@ -85,7 +85,8 @@ class SSMMotionGenerator(MotionGenerator):
         return self._to_clip(feats[0].numpy(), text)
 
     def _generate_numpy(self, text: str, num_frames: int) -> MotionClip:
-        x = np.random.randn(num_frames, self._cfg.d_model) * 0.1
+        rng = np.random.default_rng(seed=abs(hash(text)) % (2 ** 31))
+        x = rng.standard_normal((num_frames, self._cfg.d_model)) * 0.1
         return self._to_clip(self._ssm.forward(x), text)
 
     def _to_clip(self, features: np.ndarray, text: str) -> MotionClip:

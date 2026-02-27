@@ -92,7 +92,7 @@ def load_clip(kit_dir: str, clip_id: str) -> np.ndarray:
 def loop_clip(frames: np.ndarray, n_loops: int) -> np.ndarray:
     """Tile clip n_loops times, shifting root position continuosly."""
     delta = frames[-1, 0, :] - frames[0, 0, :]
-    parts = []
+    parts: list[np.ndarray] = []
     offset = np.zeros(3)
     for _ in range(n_loops):
         part = frames.copy()

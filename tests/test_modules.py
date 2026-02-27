@@ -131,9 +131,6 @@ class TestScenePlanner(unittest.TestCase):
         parsed = self.parser.parse("A ball falls on a cube")
         planned = self.planner.plan(parsed)
         
-        # Find ball and cube
-        positions = {e.name: e.position for e in planned.entities}
-        
         # At least one object should have z > 1 (elevated for falling)
         max_z = max(e.position.z for e in planned.entities)
         self.assertGreater(max_z, 0.5)
@@ -214,14 +211,14 @@ class TestSSMCore(unittest.TestCase):
         ssm = SimpleSSMNumpy(d_state=8, d_input=16, d_output=16)
         
         # Test single step
-        u = np.random.randn(16)
+        u = np.random.default_rng(seed=42).standard_normal(16)
         y = ssm.step(u)
         
         self.assertEqual(len(y), 16)
         
         # Test sequence
         ssm.reset()
-        seq = np.random.randn(10, 16)
+        seq = np.random.default_rng(seed=42).standard_normal((10, 16))
         out = ssm.forward(seq)
         
         self.assertEqual(out.shape, (10, 16))

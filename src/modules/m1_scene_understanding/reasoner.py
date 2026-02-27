@@ -104,20 +104,30 @@ class Reasoner:
 
     # -- KB enrichment --
 
+    @staticmethod
+    def _kb_name_matches(entity_name: str, kb) -> bool:
+        name_lower = entity_name.lower()
+        if name_lower in kb.name.lower():
+            return True
+        return any(name_lower in alias.lower() for alias in kb.aliases)
+
+    @staticmethod
+    def _merge_kb(entity, kb):
+        return replace(
+            entity,
+            dimensions=entity.dimensions or kb.dimensions,
+            mass=entity.mass if entity.mass is not None else kb.mass,
+            material=entity.material or (kb.material if kb.material != "unknown" else None),
+            mesh_prompt=entity.mesh_prompt or kb.mesh_prompt,
+            parts=entity.parts or kb.parts,
+        )
+
     def _enrich_from_kb(self, entities: List[ExtractedEntity]) -> List[ExtractedEntity]:
         result = []
         for entity in entities:
             hits = self._retriever.retrieve(entity.name, top_k=1)
-            if hits:
-                kb = hits[0]
-                if entity.name.lower() in kb.name.lower() or any(entity.name.lower() in a.lower() for a in kb.aliases):
-                    entity = replace(entity,
-                        dimensions=entity.dimensions or kb.dimensions,
-                        mass=entity.mass if entity.mass is not None else kb.mass,
-                        material=entity.material or (kb.material if kb.material != "unknown" else None),
-                        mesh_prompt=entity.mesh_prompt or kb.mesh_prompt,
-                        parts=entity.parts or kb.parts,
-                    )
+            if hits and self._kb_name_matches(entity.name, hits[0]):
+                entity = self._merge_kb(entity, hits[0])
             result.append(entity)
         return result
 

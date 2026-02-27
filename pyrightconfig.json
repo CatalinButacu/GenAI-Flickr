@@ -1,0 +1,14 @@
+{
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": "none",
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "examples/",
+    "tmp/",
+    "wandb/",
+    "checkpoints/",
+    "m1_checkpoints/"
+  ]
+}

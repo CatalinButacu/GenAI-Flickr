@@ -1,4 +1,4 @@
-﻿"""Humanoid body loader and joint controller for PyBullet (M5 extension)."""
+"""Humanoid body loader and joint controller for PyBullet (M5 extension)."""
 
 import os
 import logging
@@ -102,6 +102,27 @@ class HumanoidBody:
             jp[name], jv[name] = s[0], s[1]
         return HumanoidState(position=pos, orientation=orn, joint_positions=jp, joint_velocities=jv)
 
+    def get_link_world_positions(self) -> Dict[str, np.ndarray]:
+        """
+        Return the world-space 3D position (CoM) of every link after physics.
+
+        Key "base" = root pelvis.
+        Remaining keys are the joint names whose child link position is returned.
+        All positions in metres, Z-up (PyBullet world frame).
+        """
+        positions: Dict[str, np.ndarray] = {}
+        base_pos, _ = p.getBasePositionAndOrientation(
+            self.body_id, physicsClientId=self._client
+        )
+        positions["base"] = np.array(base_pos, dtype=np.float64)
+        for name, info in self._joint_info.items():
+            link_state = p.getLinkState(
+                self.body_id, info["index"], physicsClientId=self._client
+            )
+            # linkWorldPosition is index 0 (CoM frame)
+            positions[name] = np.array(link_state[0], dtype=np.float64)
+        return positions
+
     def apply_motion_frame(self, joint_angles: Dict[str, float], use_motors: bool = True) -> None:
         (self.set_joint_position_targets if use_motors else self.set_joint_positions)(joint_angles)
 
@@ -110,7 +131,7 @@ class HumanoidBody:
 
     def reset_pose(self, pose: str = "t_pose") -> None:
         poses = {
-            "t_pose": {j: 0.0 for j in self._joint_info},
+            "t_pose": dict.fromkeys(self._joint_info, 0.0),
             "stand": {"left_hip_x": 0.0, "left_hip_y": 0.0, "left_knee": 0.0,
                       "right_hip_x": 0.0, "right_hip_y": 0.0, "right_knee": 0.0},
         }

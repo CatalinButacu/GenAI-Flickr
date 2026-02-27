@@ -1,12 +1,15 @@
 """
-Render Engine — Module 7  (stub)
-==================================
-Post-processing renderer.  Not yet implemented.
+Render Engine — Module 7
+========================
+Cinematic post-processing: motion blur, DoF, color grade, vignette, film grain.
 
-Video export is currently delegated to M5 Simulator.
+Quick start::
 
-See ``render_engine.py`` for the design plan.
+    from src.modules.m7_render_engine import RenderEngine, RenderSettings
+
+    engine = RenderEngine(RenderSettings(motion_blur=True, dof=True, vignette=True))
+    engine.render(frames, "outputs/videos/output.mp4", fps=24)
 """
-from .render_engine import RenderEngine
+from .render_engine import RenderEngine, RenderSettings
 
-__all__ = ["RenderEngine"]
+__all__ = ["RenderEngine", "RenderSettings"]

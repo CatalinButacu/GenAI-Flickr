@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 from .scene import Scene
+from src.shared.mem_profile import profile_memory
 
 log = logging.getLogger(__name__)
 
@@ -232,6 +233,7 @@ class Simulator:
         log.info("Captured %d frames", len(frames))
         return frames
     
+    @profile_memory
     def run_cinematic(self, duration: float = 5.0, fps: int = 24, actions: List[Dict] = None,
                       cinematic_camera: CinematicCamera = None) -> List[FrameData]:
         actions = actions or []
@@ -308,6 +310,7 @@ class Simulator:
     def reset(self):
         self.current_time = 0.0
     
+    @profile_memory
     def create_video(self, frames: List[FrameData], output_path: str, 
                      fps: int = 24, layout: str = "horizontal") -> str:
         import imageio

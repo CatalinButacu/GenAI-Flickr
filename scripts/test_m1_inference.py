@@ -46,7 +46,8 @@ def load_model(checkpoint: str):
     tokenizer = AutoTokenizer.from_pretrained(str(path))
     model     = T5ForConditionalGeneration.from_pretrained(str(path))
     device    = "cuda" if torch.cuda.is_available() else "cpu"
-    model.to(device).eval()
+    model.to(device)  # type: ignore[arg-type]  # transformers stubs don't type .to()
+    model.eval()
     print(f"  Loaded '{path}'  device={device}\n")
     return model, tokenizer, device
 
@@ -58,7 +59,7 @@ def predict(model, tokenizer, device: str, prompt: str,
                     truncation=True, return_tensors="pt").to(device)
     with torch.no_grad():
         out = model.generate(**ids, max_length=max_out, num_beams=beams,
-                             early_stopping=True, no_repeat_ngram_size=3)
+                             early_stopping=True)
     # Decode WITHOUT skipping special tokens so <extra_id_0>/<extra_id_1>
     # survive long enough for postprocess_v3 to reverse them into { / }
     raw = tokenizer.decode(out[0], skip_special_tokens=False)
@@ -151,43 +152,52 @@ def section(t):             print(f"\n  [{t}]")
 def kv(k, v, i=2):         print(f"{'  '*i}{k+':':<18}{v}")
 def bullet(t, c="", i=4):  print(f"{'  '*(i//2)}* {c}{t}\033[0m")
 
+def _print_entities(entities: list) -> None:
+    print(f"\n  Entities ({len(entities)}):")
+    for e in entities:
+        name  = e.get("name", "?")
+        etype = e.get("type", "?")
+        attrs = e.get("attributes", {})
+        a_str = "  " + "  ".join(f"{k}={v}" for k, v in attrs.items()) if isinstance(attrs, dict) and attrs else ""
+        bullet(f"\033[92m{name}\033[0m  type={etype}{a_str}")
+
+
+def _print_actions(actions: list) -> None:
+    print(f"\n  Actions ({len(actions)}):")
+    if actions:
+        for a in actions:
+            bullet(f"\033[94m{a.get('verb','?')}\033[0m  actor={a.get('actor','?')}")
+    else:
+        print("    (none)")
+
+
+def _print_relations(relations: list) -> None:
+    print(f"\n  Relations ({len(relations)}):")
+    if relations:
+        for r in relations:
+            bullet(f"{r.get('subject','?')}  \033[96m--[{r.get('predicate','?')}]-->\033[0m  {r.get('object','?')}")
+    else:
+        print("    (none)")
+
+
+def _print_regex_fallback(raw: str) -> None:
+    names = extract_names_regex(raw)
+    preds = extract_relations_regex(raw)
+    print("\n  \033[93m[Partial parse -- JSON malformed, showing regex extraction]\033[0m")
+    print(f"  Entity names  ({len(names)}):  {', '.join(names) if names else '(none found)'}")
+    print(f"  Predicates   ({len(preds)}):  {', '.join(preds) if preds else '(none found)'}")
+    print(f"  Raw (first 180 chars): {raw[:180]}")
+
+
 def show_result(prompt: str, raw: str) -> None:
-    data, repaired = parse_json(raw)
+    data, _ = parse_json(raw)
 
     if data is not None:
-        entities  = data.get("entities", [])
-        actions   = data.get("actions", [])
-        relations = data.get("relations", [])
-
-        print(f"\n  Entities ({len(entities)}):")
-        for e in entities:
-            name  = e.get("name", "?")
-            etype = e.get("type", "?")
-            attrs = e.get("attributes", {})
-            a_str = "  " + "  ".join(f"{k}={v}" for k, v in attrs.items()) if isinstance(attrs, dict) and attrs else ""
-            bullet(f"\033[92m{name}\033[0m  type={etype}{a_str}")
-
-        print(f"\n  Actions ({len(actions)}):")
-        if actions:
-            for a in actions:
-                bullet(f"\033[94m{a.get('verb','?')}\033[0m  actor={a.get('actor','?')}")
-        else:
-            print("    (none)")
-
-        print(f"\n  Relations ({len(relations)}):")
-        if relations:
-            for r in relations:
-                bullet(f"{r.get('subject','?')}  \033[96m--[{r.get('predicate','?')}]-->\033[0m  {r.get('object','?')}")
-        else:
-            print("    (none)")
+        _print_entities(data.get("entities", []))
+        _print_actions(data.get("actions", []))
+        _print_relations(data.get("relations", []))
     else:
-        # fallback: regex extraction
-        names = extract_names_regex(raw)
-        preds = extract_relations_regex(raw)
-        print(f"\n  \033[93m[Partial parse -- JSON malformed, showing regex extraction]\033[0m")
-        print(f"  Entity names  ({len(names)}):  {', '.join(names) if names else '(none found)'}")
-        print(f"  Predicates   ({len(preds)}):  {', '.join(preds) if preds else '(none found)'}")
-        print(f"  Raw (first 180 chars): {raw[:180]}")
+        _print_regex_fallback(raw)
 
 
 def compare_counts(pred_data: dict | None, raw: str, gt: dict) -> None:
@@ -195,7 +205,7 @@ def compare_counts(pred_data: dict | None, raw: str, gt: dict) -> None:
         pred_names = extract_names_regex(raw)
         gt_names   = [e.get("name", "") for e in gt.get("entities", [])]
         overlap    = len(set(pred_names) & set(gt_names))
-        print(f"\n  Count comparison (entities only, fallback regex):")
+        print("\n  Count comparison (entities only, fallback regex):")
         print(f"    pred_names = {pred_names[:6]}")
         print(f"    gt_names   = {gt_names[:6]}")
         print(f"    name overlap: {overlap}/{len(gt_names)}")
@@ -274,7 +284,7 @@ def main():
 
     print("\n" + "=" * W)
     print("  M1 Scene Extractor -- Inference Test")
-    print(f"  Model: flan-T5-small  fine-tuned on Visual Genome (40k training samples)")
+    print("  Model: flan-T5-small  fine-tuned on Visual Genome (40k training samples)")
     print(f"  Checkpoint: {args.checkpoint}")
     print(f"  Final eval_loss: {eval_loss_str}  ({epochs_str} epochs)")
     print("=" * W + "\n")
