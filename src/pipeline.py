@@ -194,12 +194,16 @@ class Pipeline:
             scene, has_humanoid, motion_clips, load_humanoid, retarget_sequence,
         )
 
-        cam_target = [0.0, 0.3, 1.0] if has_humanoid else [0.0, 0.0, 0.3]
-        cam_dist   = 4.0             if has_humanoid else 2.5
+        cam_target = [0.0, 1.0, 0.0] if has_humanoid else [0.0, 0.0, 0.3]
+        cam_dist   = 5.0             if has_humanoid else 2.5
         sim = Simulator(scene, CameraConfig(width=640, height=480,
                                             distance=cam_dist, target=cam_target))
-        cam = CinematicCamera(target=cam_target, distance=cam_dist, yaw=45, pitch=-25)
-        cam.add_orbit(start_yaw=0, end_yaw=180, duration=self.config.duration)
+        # Humanoid: orbit from front (90°) to back (270°)
+        init_yaw = 90 if has_humanoid else 45
+        cam = CinematicCamera(target=cam_target, distance=cam_dist,
+                              yaw=init_yaw, pitch=-15)
+        cam.add_orbit(start_yaw=init_yaw, end_yaw=init_yaw + 180,
+                      duration=self.config.duration)
 
         if has_humanoid and joint_angles_seq:
             # Extract action label for the skeleton renderer overlay
@@ -448,12 +452,37 @@ class Pipeline:
         action_label: str = "",
     ) -> List:
         """Fallback: render physics-verified skeletons as glow skeleton."""
-        from src.modules.m5_physics_engine import PhysicsSkeletonRenderer
+        from src.modules.m5_physics_engine import (
+            PhysicsSkeletonRenderer, auto_orient_skeleton,
+        )
         import numpy as np
 
+        # ── Auto-orient so spine extends along +Y (upright) ──────────
+        skeleton_positions = auto_orient_skeleton(skeleton_positions)
+
+        # ── Compute camera target from first oriented frame ──────────
+        first = skeleton_positions[0]
+        # Use pelvis+neck midpoint as vertical centre (avoids toe noise)
+        y_center = float((first[0, 1] + first[3, 1]) / 2) / 1000.0   # mm → m
+        z_center = float(np.median(first[:, 2])) / 1000.0
+        x_center = float(np.median(first[:, 0])) / 1000.0
+        # Skeleton height from foot-level joints to head
+        core_joints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18]
+        skel_h = float(first[core_joints, 1].max()
+                       - first[core_joints, 1].min()) / 1000.0
+        cam_dist = max(3.5, skel_h * 1.3)
+
+        # Update CinematicCamera to orbit around actual skeleton centre
+        skel_target = [x_center, y_center, z_center]
+        cam.base_target = list(skel_target)
+        cam.current_target = list(skel_target)
+        cam.base_distance = cam_dist
+        cam.current_distance = cam_dist
+        log.info("[M5] auto-orient: height=%.1fm, target=[%.2f, %.2f, %.2f], "
+                 "dist=%.1fm", skel_h, *skel_target, cam_dist)
+
         renderer = PhysicsSkeletonRenderer(
-            img_w=1280, img_h=720, yaw_deg=45, pitch_deg=-25,
-            distance=4.0, target=[0.0, 900.0, 0.0],
+            img_w=1280, img_h=720,
             action_label=action_label,
         )
 

@@ -20,6 +20,7 @@ from .humanoid import HumanoidBody, HumanoidConfig, load_humanoid
 from .motion_retarget import retarget_frame, retarget_sequence, pelvis_transform
 from .physics_renderer import (
     PhysicsSkeletonRenderer, physics_links_to_skeleton, BONES,
+    auto_orient_skeleton,
 )
 
 __all__ = [
@@ -27,4 +28,5 @@ __all__ = [
     'HumanoidBody', 'HumanoidConfig', 'load_humanoid',
     'retarget_frame', 'retarget_sequence', 'pelvis_transform',
     'PhysicsSkeletonRenderer', 'physics_links_to_skeleton', 'BONES',
+    'auto_orient_skeleton',
 ]

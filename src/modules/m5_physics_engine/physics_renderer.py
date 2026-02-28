@@ -80,29 +80,29 @@ def _hsv_bgr(h: int, s: int, v_frac: float) -> Tuple[float, float, float]:
 # ── PyBullet link → KIT-ML joint mapping ─────────────────────────────────────
 # humanoid.urdf joint names (from HumanoidBody._joint_info) mapped to
 # their best KIT-ML counterpart index.
-# Joints present:  abdomen_x/y/z  r/l_hip_x/y/z  r/l_knee  r/l_ankle
-#                  r/l_shoulder_x/y  r/l_elbow
+# Actual URDF link names (from humanoid.get_link_world_positions()):
+#   base, root, chest, neck,
+#   left_hip, left_knee, left_ankle,
+#   right_hip, right_knee, right_ankle,
+#   left_shoulder, left_elbow, left_wrist,
+#   right_shoulder, right_elbow, right_wrist
 _LINK_TO_KIT: Dict[str, int] = {
-    "base":           0,   # pelvis / root
-    "abdomen_x":      1,   # lower spine
-    "abdomen_y":      1,
-    "abdomen_z":      2,   # chest
-    "right_hip_x":   16,
-    "right_hip_y":   16,
-    "right_hip_z":   16,
-    "right_knee":    17,
-    "right_ankle":   18,
-    "left_hip_x":    11,
-    "left_hip_y":    11,
-    "left_hip_z":    11,
-    "left_knee":     12,
-    "left_ankle":    13,
-    "right_shoulder_x":  8,
-    "right_shoulder_y":  8,
-    "right_elbow":       9,
-    "left_shoulder_x":   5,
-    "left_shoulder_y":   5,
-    "left_elbow":        6,
+    "base":             0,   # pelvis
+    "root":             1,   # lower spine / abdomen
+    "chest":            2,   # upper spine / chest
+    "neck":             3,   # neck
+    "left_shoulder":    5,
+    "left_elbow":       6,
+    "left_wrist":       7,
+    "right_shoulder":   8,
+    "right_elbow":      9,
+    "right_wrist":     10,
+    "left_hip":        11,
+    "left_knee":       12,
+    "left_ankle":      13,
+    "right_hip":       16,
+    "right_knee":      17,
+    "right_ankle":     18,
 }
 
 
@@ -110,28 +110,33 @@ def _extrapolate_missing_joints(
     xyz: np.ndarray, counts: np.ndarray
 ) -> None:
     """Fill in joints not directly mapped from PyBullet links."""
-    # Neck and head: extend spine
-    if counts[3] == 0 and counts[2] > 0 and counts[1] > 0:
-        spine_dir = xyz[2] - xyz[1]
-        xyz[3] = xyz[2] + spine_dir * 0.6
-        xyz[4] = xyz[2] + spine_dir * 1.1
-    # Wrists: extend from elbows
+    # Head: extend from neck along spine direction
+    if counts[4] == 0 and counts[3] > 0 and counts[2] > 0:
+        spine_dir = xyz[3] - xyz[2]
+        xyz[4] = xyz[3] + spine_dir * 0.5
+    # Wrists: extend from elbows (fallback if URDF has no wrist links)
     if counts[7] == 0 and counts[6] > 0 and counts[5] > 0:
         xyz[7] = xyz[6] + (xyz[6] - xyz[5]) * 0.7
     if counts[10] == 0 and counts[9] > 0 and counts[8] > 0:
         xyz[10] = xyz[9] + (xyz[9] - xyz[8]) * 0.7
-    # Left toes
+    # Left toes (offsets in metres — skeleton data is in metres here)
     if counts[14] == 0 and counts[13] > 0 and counts[12] > 0:
         fwd = xyz[13] - xyz[12]
-        fwd[1] = 0.0
-        xyz[14] = xyz[13] + fwd * 0.3 + np.array([0, -0.05, 0])
-        xyz[15] = xyz[13] + fwd * 0.5 + np.array([0, -0.05, 0])
+        fwd_flat = fwd.copy(); fwd_flat[1] = 0.0
+        norm = np.linalg.norm(fwd_flat)
+        if norm > 1e-3:
+            fwd_flat /= norm
+        xyz[14] = xyz[13] + fwd_flat * 0.080
+        xyz[15] = xyz[13] + fwd_flat * 0.140
     # Right toes
     if counts[19] == 0 and counts[18] > 0 and counts[17] > 0:
         fwd = xyz[18] - xyz[17]
-        fwd[1] = 0.0
-        xyz[19] = xyz[18] + fwd * 0.3 + np.array([0, -0.05, 0])
-        xyz[20] = xyz[18] + fwd * 0.5 + np.array([0, -0.05, 0])
+        fwd_flat = fwd.copy(); fwd_flat[1] = 0.0
+        norm = np.linalg.norm(fwd_flat)
+        if norm > 1e-3:
+            fwd_flat /= norm
+        xyz[19] = xyz[18] + fwd_flat * 0.080
+        xyz[20] = xyz[18] + fwd_flat * 0.140
 
 
 def physics_links_to_skeleton(
@@ -164,6 +169,51 @@ def physics_links_to_skeleton(
 
     _extrapolate_missing_joints(xyz, counts)
     return xyz * 1000.0
+
+
+def auto_orient_skeleton(
+    skeleton_seq: List[np.ndarray],
+) -> List[np.ndarray]:
+    """
+    Auto-orient a sequence of (21, 3) Y-up mm skeletons so the spine
+    reliably extends along +Y.
+
+    During physics simulation the retargeted humanoid can end up with its
+    spine along Z (or even X) rather than Y.  We detect the dominant
+    spine axis from the first frame and apply a *consistent* axis-swap to
+    every frame so the rendered skeleton always stands upright.
+
+    Returns a new list (original arrays are not modified).
+    """
+    if not skeleton_seq:
+        return skeleton_seq
+
+    # Detect spine direction from first frame (neck − pelvis)
+    spine = skeleton_seq[0][3] - skeleton_seq[0][0]
+    abs_sp = np.abs(spine)
+    dominant = int(np.argmax(abs_sp))
+
+    if dominant == 1 and spine[1] > 0:
+        # Spine already along +Y — nothing to do
+        return skeleton_seq
+
+    result: List[np.ndarray] = []
+    for xyz in skeleton_seq:
+        xyz_new = xyz.copy()
+
+        if dominant != 1:
+            # Swap dominant axis with Y
+            xyz_new[:, 1] = xyz[:, dominant]
+            xyz_new[:, dominant] = xyz[:, 1]
+
+        # Ensure spine points upward (+Y)
+        sp = xyz_new[3] - xyz_new[0]
+        if sp[1] < 0:
+            xyz_new[:, 1] *= -1
+
+        result.append(xyz_new)
+
+    return result
 
 
 # ── 3-D → 2-D projection ─────────────────────────────────────────────────────
