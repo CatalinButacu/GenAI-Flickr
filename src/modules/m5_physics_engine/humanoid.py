@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 class HumanoidConfig:
     height: float             = 1.7
     mass: float               = 70.0
-    use_self_collision: bool  = False
+    use_self_collision: bool  = True
     fixed_base: bool          = False
 
 
@@ -135,6 +135,30 @@ class HumanoidBody:
             # linkWorldPosition is index 0 (CoM frame)
             positions[name] = np.array(link_state[0], dtype=np.float64)
         return positions
+
+    def get_foot_contacts(self, scene) -> Dict[str, List[dict]]:
+        """Query ground and object contacts for feet (ankles).
+
+        Returns dict with 'left_ankle' and 'right_ankle' keys,
+        each containing a list of contact dicts.
+        """
+        contacts = {}
+        for foot in ("left_ankle", "right_ankle"):
+            if foot in self._joint_info:
+                link_idx = self._joint_info[foot]["index"]
+                import pybullet as p
+                raw = p.getContactPoints(
+                    self.body_id, linkIndexA=link_idx,
+                    physicsClientId=self._client,
+                )
+                contacts[foot] = [
+                    {
+                        "bodyB": c[2], "posA": c[5], "posB": c[6],
+                        "normal": c[7], "distance": c[8], "force": c[9],
+                    }
+                    for c in raw
+                ]
+        return contacts
 
     def apply_motion_frame(self, joint_angles: Dict[str, float], use_motors: bool = True) -> None:
         (self.set_joint_position_targets if use_motors else self.set_joint_positions)(joint_angles)

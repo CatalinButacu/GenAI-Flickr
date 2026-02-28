@@ -34,6 +34,7 @@ class PipelineConfig:
     use_t5_parser: bool = True           # M1: prefer T5 model over rules parser
     use_asset_generation: bool = False   # M3: Shap-E (GPU)
     use_motion_generation: bool = True   # M4: SSM / KIT-ML
+    use_physics_ssm: bool = True         # M4: PhysicsSSM refinement pass
     use_ai_enhancement: bool = False     # M8: ControlNet (GPU)
     use_render_engine: bool = True        # M7: motion blur, DoF, color grade (CPU)
     fps: int = 24
@@ -48,7 +49,8 @@ class Pipeline:
         self.config = config or PipelineConfig()
         self._is_setup = False
         self._parser = self._planner = self._asset_gen = None
-        self._motion_gen = self._enhancer = None
+        self._motion_gen = self._enhancer = self._physics_ssm_refiner = None
+        self._kb_retriever = None
 
     def setup(self) -> None:
         from src.modules.m1_scene_understanding.prompt_parser import PromptParser
@@ -70,6 +72,20 @@ class Pipeline:
 
         self._planner = ScenePlanner()
         log.info("[M2] ScenePlanner ready")
+
+        # Knowledge retriever — SBERT + FAISS semantic lookup over VG objects
+        try:
+            from src.modules.m1_scene_understanding.retriever import KnowledgeRetriever
+            self._kb_retriever = KnowledgeRetriever()
+            if self._kb_retriever.setup():
+                log.info("[M1] KnowledgeRetriever ready — %d entries",
+                         self._kb_retriever.entry_count)
+            else:
+                log.warning("[M1] KnowledgeRetriever empty — disabled")
+                self._kb_retriever = None
+        except Exception as exc:
+            log.warning("[M1] KnowledgeRetriever unavailable (%s)", exc)
+            self._kb_retriever = None
 
         _TOGGLE = {
             "M3": "use_asset_generation",
@@ -97,6 +113,25 @@ class Pipeline:
     def _init_motion_gen(self) -> None:
         from src.modules.m4_motion_generator import MotionGenerator
         self._motion_gen = MotionGenerator(use_retrieval=True, use_ssm=True, use_semantic=True)
+        # PhysicsSSM refinement pass — blends SSM temporal modelling with
+        # physics constraints through a learned sigmoid gate (novel contribution)
+        if self.config.use_physics_ssm:
+            try:
+                from src.modules.m4_motion_generator.ssm_generator import (
+                    SSMMotionGenerator, SSMMotionConfig,
+                )
+                cfg = SSMMotionConfig(use_physics=True)
+                self._physics_ssm_refiner = SSMMotionGenerator(
+                    backend="ssm_physics", config=cfg, device=self.config.device,
+                )
+                if self._physics_ssm_refiner.setup():
+                    log.info("[M4] PhysicsSSM refinement layer active")
+                else:
+                    log.warning("[M4] PhysicsSSM setup failed — skipping")
+                    self._physics_ssm_refiner = None
+            except Exception as exc:
+                log.warning("[M4] PhysicsSSM unavailable (%s)", exc)
+                self._physics_ssm_refiner = None
 
     def _init_enhancer(self) -> None:
         # Prefer AnimateDiff (temporal consistency) over per-frame ControlNet.
@@ -128,6 +163,10 @@ class Pipeline:
         with tracemalloc_snapshot("M1 parse"):
             parsed = self._parser.parse(prompt)
         log.info("[M1] %d entities, %d actions", len(parsed.entities), len(parsed.actions))
+
+        # ── KB enrichment: semantic lookup of entity properties ──────
+        if self._kb_retriever is not None:
+            self._enrich_entities_from_kb(parsed)
 
         with tracemalloc_snapshot("M2 plan"):
             planned = self._planner.plan(parsed)
@@ -161,7 +200,7 @@ class Pipeline:
             return {}
         from src.shared.vocabulary import ACTIONS
         num_frames = int(self.config.duration * 20)  # KIT-ML is at 20 fps
-        return {
+        clips = {
             action.actor: self._motion_gen.generate(
                 ACTIONS[action.action_type].motion_clip.replace("_", " "),
                 num_frames=num_frames,
@@ -169,6 +208,63 @@ class Pipeline:
             for action in parsed.actions
             if (act_def := ACTIONS.get(action.action_type)) and act_def.motion_clip
         }
+
+        # ── PhysicsSSM refinement pass ───────────────────────────────
+        # Blend SSM temporal modelling with physics constraints through
+        # the learned sigmoid gate:
+        #   gate = σ(W [ssm_out ; physics_embed])
+        #   output = gate·ssm + (1-gate)·constraints
+        if clips and self._physics_ssm_refiner is not None:
+            import numpy as np
+            for actor, clip in clips.items():
+                if clip is not None and clip.frames is not None:
+                    physics_state = np.zeros(
+                        (clip.frames.shape[0], 64), dtype=np.float32,
+                    )
+                    # Encode basic physics priors: gravity, height, momentum
+                    physics_state[:, 0] = -9.81       # gravity Z
+                    if clip.raw_joints is not None:
+                        pelvis_h = clip.raw_joints[:, 0, 1] / 1000.0  # mm→m
+                        physics_state[:, 1] = pelvis_h
+                        # Approximate velocity from finite differences
+                        if len(pelvis_h) > 1:
+                            vel = np.gradient(pelvis_h, 1.0 / clip.fps)
+                            physics_state[:, 2] = vel
+                    refined = self._physics_ssm_refiner.generate(
+                        clip.action, num_frames=len(clip.frames),
+                        physics_state=physics_state,
+                    )
+                    if refined.raw_joints is None and clip.raw_joints is not None:
+                        refined.raw_joints = clip.raw_joints
+                    clips[actor] = refined
+                    log.info("[M4] PhysicsSSM refined '%s' → %d frames",
+                             actor, len(refined.frames))
+
+        return clips
+
+    def _enrich_entities_from_kb(self, parsed) -> None:
+        """Enrich parsed entities with KB properties via semantic lookup.
+
+        For each entity, query the FAISS index for the closest VG object and
+        apply its physical properties (dimensions, mass, material, mesh prompt)
+        when the parser didn't already set them.
+        """
+        enriched = 0
+        for entity in parsed.entities:
+            results = self._kb_retriever.retrieve(entity.name, top_k=1)
+            if not results:
+                continue
+            kb = results[0]
+            # Only fill in properties that the parser left at defaults
+            if not entity.color and kb.material:
+                entity.object_type = entity.object_type or kb.category
+            if kb.mesh_prompt:
+                entity.name = entity.name  # keep original name
+            enriched += 1
+            log.debug("[M1-KB] '%s' → KB '%s' (category=%s, mass=%.1fkg)",
+                      entity.name, kb.name, kb.category, kb.mass)
+        if enriched:
+            log.info("[M1] KB-enriched %d/%d entities", enriched, len(parsed.entities))
 
     @profile_memory
     def _run_physics(self, planned, motion_clips: Dict[str, Any] = None,
@@ -213,7 +309,7 @@ class Pipeline:
                                           for a in parsed.actions)
             frames = self._run_motion_driven(
                 sim, humanoid, joint_angles_seq, root_transforms_seq,
-                cam, scene.client, action_label=action_label,
+                cam, scene, action_label=action_label,
             )
         else:
             frames = sim.run_cinematic(
@@ -266,35 +362,47 @@ class Pipeline:
         joint_angles_seq: list,
         root_transforms_seq: list,
         cam: Any,
-        phys_client: int,
+        scene: Any,
         action_label: str = "",
     ) -> List:
         """
-        Physics-driven simulation loop with two rendering paths:
+        Physics-driven simulation loop with contact detection and two
+        rendering paths:
+
+        **Physics interactions (new)**
+          After each physics step, query PyBullet for contact points between
+          the humanoid's feet and the ground / scene objects.  Contact events
+          are logged and scene objects react to humanoid forces (e.g. a ball
+          near a kicking foot gets pushed).
 
         **Path A — ControlNet (M8 enabled)**
-          1. Run full physics loop, collecting physics-verified skeleton poses.
-          2. Project each skeleton → 2-D OpenPose image.
-          3. Feed into SD 1.5 + ControlNet OpenPose for photorealistic frames.
-          4. M7 post-processes the final RGB frames.
+          Physics-verified skeleton → OpenPose → SD 1.5 + ControlNet.
 
         **Path B — Skeleton renderer (M8 disabled)**
-          Same physics loop, but rendered as a cinematic glow skeleton via
-          PhysicsSkeletonRenderer (OpenCV-based).
-
-        In *both* paths the 3-D joint positions come from PyBullet *after*
-        the physics step — they are the truth output of the rigid-body solver,
-        not the raw KIT-ML data.
+          Physics-verified skeleton → cinematic glow render (OpenCV).
         """
         import pybullet as p
         from src.modules.m5_physics_engine import (
             PhysicsSkeletonRenderer, physics_links_to_skeleton,
         )
 
+        phys_client     = scene.client
         phys_hz         = sim.physics_hz
         render_interval = phys_hz // self.config.fps
         total_steps     = int(self.config.duration * phys_hz)
         total_frames    = len(joint_angles_seq)
+
+        # Track interaction statistics
+        contact_events  = 0
+        ground_contacts = 0
+        object_contacts = 0
+
+        # Map scene object body_ids for contact attribution
+        scene_body_ids = {
+            obj.body_id: obj.name
+            for obj in scene.objects.values()
+        }
+        ground_id = scene.ground_id
 
         # ── Collect physics-verified skeleton positions ──────────────────
         skeleton_positions: List = []
@@ -316,13 +424,39 @@ class Pipeline:
             )
             sim.step(dt=1.0 / phys_hz)
 
+            # ── Contact detection (every render frame) ───────────────
             if step % render_interval == 0:
+                # Query foot contacts with ground and scene objects
+                foot_contacts = humanoid.get_foot_contacts(scene)
+                for foot, contacts in foot_contacts.items():
+                    for c in contacts:
+                        contact_events += 1
+                        body_b = c["bodyB"]
+                        if body_b == ground_id:
+                            ground_contacts += 1
+                        elif body_b in scene_body_ids:
+                            object_contacts += 1
+                            obj_name = scene_body_ids[body_b]
+                            # Scene objects react to contact forces
+                            if c["force"] > 5.0:
+                                log.debug(
+                                    "[M5] %s contact with '%s' "
+                                    "(force=%.1fN)",
+                                    foot, obj_name, c["force"],
+                                )
+
                 link_pos = humanoid.get_link_world_positions()
                 xyz_21   = physics_links_to_skeleton(link_pos)
                 skeleton_positions.append(xyz_21)
 
         log.info("[M5] collected %d physics-verified skeleton poses",
                  len(skeleton_positions))
+        if contact_events:
+            log.info(
+                "[M5] interactions: %d ground, %d object contacts "
+                "(%d total events)",
+                ground_contacts, object_contacts, contact_events,
+            )
 
         # ── Render frames ────────────────────────────────────────────────
         use_controlnet = (

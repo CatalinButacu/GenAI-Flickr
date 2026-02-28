@@ -183,6 +183,27 @@ class Scene:
         pos, orn = p.getBasePositionAndOrientation(obj.body_id)
         return list(pos), list(orn)
     
+    def get_contact_points(self, body_a: int, body_b: int = -1) -> List[dict]:
+        """Query contact points between two bodies (or body_a vs everything).
+
+        Returns list of dicts with: posA, posB, normal, distance, force.
+        """
+        import pybullet as p
+        if body_b >= 0:
+            contacts = p.getContactPoints(body_a, body_b,
+                                          physicsClientId=self.client)
+        else:
+            contacts = p.getContactPoints(body_a,
+                                          physicsClientId=self.client)
+        return [
+            {
+                "posA": c[5], "posB": c[6],
+                "normal": c[7], "distance": c[8],
+                "force": c[9],
+            }
+            for c in contacts
+        ]
+
     def apply_force(self, name: str, force: List[float], position: List[float] = None) -> bool:
         import pybullet as p
         obj = self.objects.get(name)
