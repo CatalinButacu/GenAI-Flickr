@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .prompt_parser import ParsedAction, ParsedEntity, ParsedScene, PromptParser
+from src.shared.vocabulary import OBJECTS, get_object_by_keyword
 
 log = logging.getLogger(__name__)
 
@@ -119,7 +120,25 @@ class T5SceneParser:
             if data is None:
                 log.warning("T5 output is not valid JSON — falling back")
                 return self._do_fallback(prompt)
-            return self._dict_to_parsed_scene(prompt, data)
+            scene = self._dict_to_parsed_scene(prompt, data)
+
+            # Augment: if T5 found entities but 0 actions, use rules-parser
+            if not scene.actions and self._fallback_parser is not None:
+                fb = self._fallback_parser.parse(prompt)
+                if fb.actions:
+                    scene.actions = fb.actions
+                    log.info("T5 found 0 actions — augmented with %d from PromptParser",
+                             len(fb.actions))
+                # Also merge any entities the rules-parser found that T5 missed
+                t5_types = {e.object_type for e in scene.entities}
+                for e in fb.entities:
+                    if e.object_type not in t5_types:
+                        scene.entities.append(e)
+                        t5_types.add(e.object_type)
+                        log.info("T5 missed entity type '%s' — added from PromptParser",
+                                 e.object_type)
+
+            return scene
         except Exception as exc:
             log.warning("T5SceneParser.parse() failed: %s — falling back", exc)
             return self._do_fallback(prompt)
@@ -199,9 +218,28 @@ class T5SceneParser:
         for e in data.get("entities", []):
             name = e.get("name", "unknown")
             etype = e.get("type", "object").lower()
+
+            # Map raw type (e.g. "person") → OBJECTS key (e.g. "humanoid")
+            if etype not in OBJECTS:
+                obj_def = get_object_by_keyword(etype)
+                if obj_def:
+                    etype = obj_def.name
+                # Also try looking up by entity name keywords
+                if etype not in OBJECTS:
+                    for word in name.lower().split():
+                        obj_def = get_object_by_keyword(word)
+                        if obj_def:
+                            etype = obj_def.name
+                            break
+
             is_actor = etype in _ACTOR_TYPES or any(
                 t in name.lower() for t in _ACTOR_TYPES
             )
+            # If OBJECTS recognises this as HUMANOID, force is_actor
+            vocab_obj = OBJECTS.get(etype)
+            if vocab_obj and vocab_obj.category.name == "HUMANOID":
+                is_actor = True
+
             color = self._extract_color(name)
             entities.append(ParsedEntity(
                 name=name,
@@ -212,13 +250,14 @@ class T5SceneParser:
 
         for r in data.get("relations", []):
             subj = r.get("subject", "")
-            pred = r.get("predicate", "")
+            pred = r.get("predicate", "").lower().strip()
             obj = r.get("object", "")
 
             # If the predicate looks like an action verb → ParsedAction
             if pred in _ACTION_PREDICATES:
+                canon = _PRED_TO_ACTION.get(pred, pred)
                 actions.append(ParsedAction(
-                    action_type=pred,
+                    action_type=canon,
                     actor=subj,
                     target=obj,
                 ))
@@ -264,4 +303,37 @@ _ACTION_PREDICATES = frozenset({
     "rides", "drives", "flies", "jumps", "runs", "walks",
     "sits on", "stands on", "falls on", "falls onto",
     "bounces", "rolls", "slides", "spins",
+    # base forms (T5 may output either inflected or base)
+    "kick", "throw", "push", "pull", "hit", "catch",
+    "chase", "follow", "carry", "lift", "drop", "hold",
+    "ride", "drive", "fly", "jump", "run", "walk",
+    "sit", "stand", "fall", "bounce", "roll", "slide", "spin",
+    "wave", "pick up", "place", "pick", "grab",
 })
+
+# Map every recognised predicate → canonical ACTIONS dict key
+_PRED_TO_ACTION: dict[str, str] = {
+    # inflected → base
+    "kicks": "kick",    "throws": "throw",   "pushes": "push",
+    "pulls": "push",    "hits": "collide",   "catches": "pick_up",
+    "chases": "run",    "follows": "walk",   "carries": "pick_up",
+    "lifts": "pick_up", "drops": "place",    "holds": "stand",
+    "rides": "walk",    "drives": "walk",    "flies": "jump",
+    "jumps": "jump",    "runs": "run",       "walks": "walk",
+    "sits on": "stand", "stands on": "stand",
+    "falls on": "fall", "falls onto": "fall",
+    "bounces": "bounce", "rolls": "roll",    "slides": "slide",
+    "spins": "walk",
+    # base forms (identity mapping)
+    "kick": "kick",     "throw": "throw",    "push": "push",
+    "pull": "push",     "hit": "collide",    "catch": "pick_up",
+    "chase": "run",     "follow": "walk",    "carry": "pick_up",
+    "lift": "pick_up",  "drop": "place",     "hold": "stand",
+    "ride": "walk",     "drive": "walk",     "fly": "jump",
+    "jump": "jump",     "run": "run",        "walk": "walk",
+    "sit": "stand",     "stand": "stand",    "fall": "fall",
+    "bounce": "bounce", "roll": "roll",      "slide": "slide",
+    "spin": "walk",     "wave": "wave",
+    "pick up": "pick_up", "pick": "pick_up", "place": "place",
+    "grab": "pick_up",
+}

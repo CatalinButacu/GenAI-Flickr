@@ -31,37 +31,37 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# ── 10 showcase prompts ──────────────────────────────────────────────────────
+# ── 10 showcase prompts — human actions & interactions ────────────────────────
 PROMPTS = [
-    # 1. Simple object physics (object-only, no actor)
-    ("01_ball_falls", "a red ball falls onto a blue cube"),
+    # 1. Person walking — basic humanoid locomotion  
+    ("01_person_walks", "a person walks forward slowly"),
 
-    # 2. Person walking — humanoid motion retrieval
-    ("02_person_walks", "a person walks forward slowly"),
+    # 2. Person running — faster motion clip
+    ("02_person_runs", "a man runs quickly across the room"),
 
-    # 3. Person kicking — actor + object interaction
-    ("03_kick_ball", "a person walks to a ball and kicks it"),
+    # 3. Person jumping — vertical motion
+    ("03_person_jumps", "a person jumps over a small box"),
 
-    # 4. Falling objects — pure object physics
-    ("04_falling_objects", "three balls fall onto a flat surface"),
+    # 4. Person kicks a ball — actor + object interaction
+    ("04_kick_ball", "a person kicks a red ball on the ground"),
 
-    # 5. Spatial relations — constraint layout
-    ("05_spatial", "a green cube is on top of a red table"),
+    # 5. Person throws an object — manipulation action
+    ("05_throw_ball", "a man throws a blue ball forward"),
 
-    # 6. Multi-entity scene — complex layout
-    ("06_multi_entity", "a chair is near a table and a lamp is on the table"),
+    # 6. Person pushes furniture — interaction with heavy object
+    ("06_push_table", "a person pushes a brown table across the floor"),
 
-    # 7. Person running — different motion clip
-    ("07_person_runs", "a person runs quickly across the room"),
+    # 7. Person picks up a box — manipulation + spatial
+    ("07_pick_up", "a woman picks up a green cube from the table"),
 
-    # 8. Object collision — physics dynamics
-    ("08_collision", "a sphere collides with a cylinder"),
+    # 8. Person waves — gesture action
+    ("08_wave", "a person stands near a table and waves hello"),
 
-    # 9. Person + furniture — mixed scene
-    ("09_person_furniture", "a person stands next to a wooden table"),
+    # 9. Multi-action sequence — walk + kick
+    ("09_walk_kick", "a person walks toward a ball and kicks it"),
 
-    # 10. Complex action sequence
-    ("10_jump", "a person jumps over a small box"),
+    # 10. Complex scene — person + multiple objects + action
+    ("10_complex", "a man runs to a red ball near a blue cube and kicks it"),
 ]
 
 

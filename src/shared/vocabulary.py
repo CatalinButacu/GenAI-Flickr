@@ -45,7 +45,7 @@ ACTIONS: dict[str, ActionDefinition] = {
     "run":     ActionDefinition("run",     ActionCategory.LOCOMOTION,   ["run", "running", "runs", "sprint", "dash", "rush"],                        True,  "run_forward",   1),
     "jump":    ActionDefinition("jump",    ActionCategory.LOCOMOTION,   ["jump", "jumping", "jumps", "leap", "hop"],                                 False, "jump_in_place", 2),
     "stand":   ActionDefinition("stand",   ActionCategory.POSE,         ["stand", "standing", "stands", "stop", "halt", "wait"],                    False, "idle_stand",    3),
-    "pick_up": ActionDefinition("pick_up", ActionCategory.MANIPULATION, ["pick", "pick up", "grab", "take", "lift", "grasp"],                       True,  "pick_object",   4),
+    "pick_up": ActionDefinition("pick_up", ActionCategory.MANIPULATION, ["pick", "pick up", "picks up", "picking up", "picks", "grab", "grabs", "take", "takes", "lift", "lifts", "grasp"],                       True,  "pick_object",   4),
     "throw":   ActionDefinition("throw",   ActionCategory.MANIPULATION, ["throw", "throwing", "throws", "toss", "hurl"],                            True,  "throw_object",  5),
     "place":   ActionDefinition("place",   ActionCategory.MANIPULATION, ["place", "put", "put down", "set", "drop", "release"],                    True,  "place_object",  6),
     "kick":    ActionDefinition("kick",    ActionCategory.INTERACTION,  ["kick", "kicking", "kicks", "boot", "punt"],                               True,  "kick_object",   7),
