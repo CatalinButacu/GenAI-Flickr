@@ -136,7 +136,7 @@ class Pipeline:
         with tracemalloc_snapshot("M4 motion"):
             motion_clips = self._generate_motion(parsed)
         with tracemalloc_snapshot("M5 physics"):
-            frames, sim, scene = self._run_physics(planned, motion_clips)
+            frames, sim, scene = self._run_physics(planned, motion_clips, parsed)
         log.info("[M5] %d frames captured", len(frames))
 
         with tracemalloc_snapshot("M7 export"):
@@ -171,7 +171,8 @@ class Pipeline:
         }
 
     @profile_memory
-    def _run_physics(self, planned, motion_clips: Dict[str, Any] = None):
+    def _run_physics(self, planned, motion_clips: Dict[str, Any] = None,
+                     parsed=None):
         from src.modules.m5_physics_engine import (
             Scene, Simulator, CameraConfig, CinematicCamera,
             load_humanoid, retarget_sequence,
@@ -194,16 +195,21 @@ class Pipeline:
         )
 
         cam_target = [0.0, 0.3, 1.0] if has_humanoid else [0.0, 0.0, 0.3]
-        cam_dist   = 3.5             if has_humanoid else 2.5
+        cam_dist   = 4.0             if has_humanoid else 2.5
         sim = Simulator(scene, CameraConfig(width=640, height=480,
                                             distance=cam_dist, target=cam_target))
-        cam = CinematicCamera(target=cam_target, distance=cam_dist, yaw=30, pitch=-20)
-        cam.add_orbit(start_yaw=10, end_yaw=70, duration=self.config.duration)
+        cam = CinematicCamera(target=cam_target, distance=cam_dist, yaw=45, pitch=-25)
+        cam.add_orbit(start_yaw=0, end_yaw=180, duration=self.config.duration)
 
         if has_humanoid and joint_angles_seq:
+            # Extract action label for the skeleton renderer overlay
+            action_label = ""
+            if parsed and parsed.actions:
+                action_label = " + ".join(a.action_type.replace("_", " ")
+                                          for a in parsed.actions)
             frames = self._run_motion_driven(
                 sim, humanoid, joint_angles_seq, root_transforms_seq,
-                cam, scene.client,
+                cam, scene.client, action_label=action_label,
             )
         else:
             frames = sim.run_cinematic(
@@ -257,6 +263,7 @@ class Pipeline:
         root_transforms_seq: list,
         cam: Any,
         phys_client: int,
+        action_label: str = "",
     ) -> List:
         """
         Physics-driven simulation loop with two rendering paths:
@@ -326,7 +333,7 @@ class Pipeline:
             )
         else:
             raw_frames = self._render_skeleton(
-                skeleton_positions, cam,
+                skeleton_positions, cam, action_label=action_label,
             )
 
         from src.modules.m5_physics_engine import FrameData
@@ -438,14 +445,16 @@ class Pipeline:
     # ------------------------------------------------------------------
     def _render_skeleton(
         self, skeleton_positions: List, cam: Any,
+        action_label: str = "",
     ) -> List:
         """Fallback: render physics-verified skeletons as glow skeleton."""
         from src.modules.m5_physics_engine import PhysicsSkeletonRenderer
         import numpy as np
 
         renderer = PhysicsSkeletonRenderer(
-            img_w=720, img_h=1080, yaw_deg=30, pitch_deg=-20,
-            distance=3.5, target=[0.0, 0.8, 0.0],
+            img_w=1280, img_h=720, yaw_deg=45, pitch_deg=-25,
+            distance=4.0, target=[0.0, 900.0, 0.0],
+            action_label=action_label,
         )
 
         raw_frames = []

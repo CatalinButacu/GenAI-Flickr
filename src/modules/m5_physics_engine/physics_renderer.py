@@ -257,18 +257,18 @@ def _make_background(w: int, h: int) -> np.ndarray:
     """Dark studio background with a warm ground glow."""
     cx, cy = np.meshgrid(np.linspace(-1, 1, w), np.linspace(-1, 1, h))
     r  = np.sqrt(cx**2 + cy**2)
-    bg = np.clip(1 - 0.75 * r, 0.03, 0.22)
+    bg = np.clip(1 - 0.75 * r, 0.03, 0.18)
 
-    # Ground glow
-    hy = int(h * 0.75)
+    # Ground glow — subtle warm zone at bottom
+    hy = int(h * 0.70)
     glow = np.zeros((h, w), np.float32)
-    glow[hy:, :] = np.linspace(0, 1, h - hy)[:, None] ** 1.5 * 0.25
-    glow = cv2.GaussianBlur(glow, (0, 0), sigmaX=w * 0.05)
+    glow[hy:, :] = np.linspace(0, 1, h - hy)[:, None] ** 1.8 * 0.18
+    glow = cv2.GaussianBlur(glow, (0, 0), sigmaX=w * 0.06)
 
     rgb = np.stack([
-        np.clip(bg + glow * 0.35, 0, 1),
-        np.clip(bg + glow * 0.22, 0, 1),
-        np.clip(bg + glow * 0.06, 0, 1),
+        np.clip(bg + glow * 0.30, 0, 1),
+        np.clip(bg + glow * 0.20, 0, 1),
+        np.clip(bg + glow * 0.05, 0, 1),
     ], axis=-1)
     return (rgb * 255).astype(np.uint8)
 
@@ -291,6 +291,8 @@ def render_physics_skeleton_frame(
     bg: np.ndarray,
     w: int,
     h: int,
+    camera: Optional["_VirtualCamera"] = None,
+    action_label: str = "",
 ) -> np.ndarray:
     """
     Render one cinematic skeleton frame.
@@ -298,8 +300,15 @@ def render_physics_skeleton_frame(
     uvd       : (21, 3)  — (col, row, depth_norm) from VirtualCamera.project()
     joint_vel : (21,)    — per-joint speed (mm/frame) for heat colouring
     bg        : (H, W, 3) uint8 background
+    camera    : _VirtualCamera instance for drawing ground grid
+    action_label : text label drawn at top-right corner
     """
     canvas   = bg.astype(np.float32) / 255.0
+
+    # Draw ground grid first (behind skeleton)
+    if camera is not None:
+        _draw_ground_grid(canvas, camera, w, h)
+
     glow_buf = np.zeros((h, w, 3), np.float32)
     core_buf = np.zeros((h, w, 3), np.float32)
 
@@ -346,18 +355,91 @@ def render_physics_skeleton_frame(
         shadow = cv2.GaussianBlur(shadow, (0, 0), sigmaX=14)
         result = result * (1 - shadow[:, :, np.newaxis] * 0.55)
 
+    # Action label overlay
+    if action_label:
+        _draw_action_label(result, action_label, w, h)
+
     return (np.clip(result, 0, 1) * 255).astype(np.uint8)
+
+
+def _draw_ground_grid(
+    canvas: np.ndarray,
+    camera: "_VirtualCamera",
+    w: int, h: int,
+    grid_extent: float = 3000.0,
+    grid_step: float = 500.0,
+) -> None:
+    """
+    Draw a perspective ground grid on the canvas for spatial orientation.
+    Grid is on the XZ plane at Y=0 (floor level), in Y-up mm coordinates.
+    """
+    lines = []
+    n = int(grid_extent / grid_step)
+    for i in range(-n, n + 1):
+        coord = i * grid_step
+        # Lines parallel to Z axis
+        lines.append(np.array([[coord, 0.0, -grid_extent],
+                                [coord, 0.0, grid_extent]]))
+        # Lines parallel to X axis
+        lines.append(np.array([[-grid_extent, 0.0, coord],
+                                [grid_extent, 0.0, coord]]))
+
+    for seg in lines:
+        uv_a = camera.project(seg[0:1])[0]
+        uv_b = camera.project(seg[1:2])[0]
+        # Skip lines behind camera or far off-screen
+        if uv_a[2] < 0 or uv_b[2] < 0:
+            continue
+        pa = (int(uv_a[0]), int(uv_a[1]))
+        pb = (int(uv_b[0]), int(uv_b[1]))
+        # Clip to frame with margin
+        margin = w * 2
+        if (pa[0] < -margin and pb[0] < -margin) or \
+           (pa[0] > w + margin and pb[0] > w + margin):
+            continue
+        if (pa[1] < -margin and pb[1] < -margin) or \
+           (pa[1] > h + margin and pb[1] > h + margin):
+            continue
+        # Centre axis lines slightly brighter
+        is_axis = abs(seg[0][0]) < 1.0 or abs(seg[0][2]) < 1.0
+        colour = (0.18, 0.22, 0.25) if is_axis else (0.10, 0.12, 0.14)
+        thick = 2 if is_axis else 1
+        cv2.line(canvas, pa, pb, colour, thick, cv2.LINE_AA)
+
+
+def _draw_action_label(
+    canvas: np.ndarray,
+    action_label: str,
+    w: int, h: int,
+) -> None:
+    """Draw the current action name on the frame for clarity."""
+    if not action_label:
+        return
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    scale = max(0.5, w / 1200.0)
+    thick = max(1, int(scale * 2))
+    text = action_label.upper()
+    (tw, th), _ = cv2.getTextSize(text, font, scale, thick)
+    x = w - tw - 20
+    y = th + 20
+    # Dark background bar
+    cv2.rectangle(canvas, (x - 10, 2), (w - 2, y + 10),
+                  (0.06, 0.06, 0.06), -1)
+    # Label text in warm white
+    cv2.putText(canvas, text, (x, y), font, scale,
+                (0.85, 0.80, 0.70), thick, cv2.LINE_AA)
 
 
 # ── Main interface ────────────────────────────────────────────────────────────
 
 class PhysicsSkeletonRenderer:
     """
-    Renders physics-verified skeleton frames.
+    Renders physics-verified skeleton frames with perspective ground grid,
+    action label, and clear spatial orientation.
 
     Usage::
 
-        renderer = PhysicsSkeletonRenderer(img_w=720, img_h=1080)
+        renderer = PhysicsSkeletonRenderer(img_w=1280, img_h=720)
         for step in simulation_loop:
             link_pos = humanoid.get_link_world_positions()
             xyz_21   = physics_links_to_skeleton(link_pos)
@@ -366,17 +448,19 @@ class PhysicsSkeletonRenderer:
 
     def __init__(
         self,
-        img_w: int = 720,
-        img_h: int = 1080,
-        yaw_deg: float = 30.0,
-        pitch_deg: float = -20.0,
-        distance: float = 3.5,
+        img_w: int = 1280,
+        img_h: int = 720,
+        yaw_deg: float = 45.0,
+        pitch_deg: float = -25.0,
+        distance: float = 4.0,
         target: Optional[List[float]] = None,
+        action_label: str = "",
     ):
         self.w   = img_w
         self.h   = img_h
+        self.action_label = action_label
         self.cam = _VirtualCamera(
-            target=np.array(target or [0.0, 0.8, 0.0]),
+            target=np.array(target or [0.0, 900.0, 0.0]),
             distance=distance,
             yaw_deg=yaw_deg,
             pitch_deg=pitch_deg,
@@ -408,4 +492,8 @@ class PhysicsSkeletonRenderer:
         self._prev_xyz = xyz_21.copy()
 
         uvd = self.cam.project(xyz_21)
-        return render_physics_skeleton_frame(uvd, vel, self._bg, self.w, self.h)
+        frame = render_physics_skeleton_frame(
+            uvd, vel, self._bg, self.w, self.h,
+            camera=self.cam, action_label=self.action_label,
+        )
+        return frame
