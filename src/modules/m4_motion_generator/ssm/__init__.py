@@ -11,7 +11,8 @@
     n/a (package init)
 
 #OUTPUT
-    All SSM classes, factories, and utilities available via `from src.ssm import ...`
+    All SSM classes, factories, and utilities available via
+    `from src.modules.m4_motion_generator.ssm import ...`
 """
 
 import torch

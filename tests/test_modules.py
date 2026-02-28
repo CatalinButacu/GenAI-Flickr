@@ -186,7 +186,7 @@ class TestSSMCore(unittest.TestCase):
     
     def test_ssm_info(self):
         """SSM info returns expected structure."""
-        from src.ssm import get_ssm_info
+        from src.modules.m4_motion_generator.ssm import get_ssm_info
         
         info = get_ssm_info()
         
@@ -197,7 +197,7 @@ class TestSSMCore(unittest.TestCase):
         
     def test_numpy_ssm(self):
         """NumPy SSM fallback works."""
-        from src.ssm import SimpleSSMNumpy
+        from src.modules.m4_motion_generator.ssm import SimpleSSMNumpy
         
         ssm = SimpleSSMNumpy(d_state=8, d_input=16, d_output=16)
         

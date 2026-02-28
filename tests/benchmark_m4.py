@@ -60,13 +60,13 @@ class M4Benchmark:
             self.test("3. KITMLLoader import", False, str(e)[:30])
 
         try:
-            from src.ssm import MotionSSM, MambaLayer  # noqa: F401
+            from src.modules.m4_motion_generator.ssm import MotionSSM, MambaLayer  # noqa: F401
             self.test("4. SSM modules import", True)
         except ImportError as e:
             self.test("4. SSM modules import", False, str(e)[:30])
 
         try:
-            from src.modules.m4_motion_generator.train import TextToMotionSSM  # noqa: F401
+            from src.modules.m4_motion_generator.nn_models import TextToMotionSSM  # noqa: F401
             self.test("5. Training module import", True)
         except ImportError as e:
             self.test("5. Training module import", False, str(e)[:30])

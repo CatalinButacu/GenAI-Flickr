@@ -9,7 +9,7 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.m4_motion_generator.train import TrainingConfig, train_motion_ssm
+from src.modules.m4_motion_generator.trainer import TrainingConfig, train_motion_ssm
 
 
 def main():

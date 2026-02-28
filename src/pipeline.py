@@ -1,7 +1,7 @@
 """
 #WHERE
-    Entry point of the whole system — called by demo.py, demo_v2.py,
-    test_pipeline.py, and run_wrapper.py.
+    Entry point of the whole system — called by main.py,
+    scripts/run_showcase.py, and examples/.
 
 #WHAT
     End-to-end pipeline: text prompt → M1 parse → M2 plan → M3 assets →

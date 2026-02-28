@@ -58,7 +58,7 @@ data/HumanML3D/
 ```python
 # Pseudo-code for training SSM motion generator
 
-from src.ssm import MotionSSM
+from src.modules.m4_motion_generator.ssm import MotionSSM
 from src.motion_generator import SSMMotionConfig
 
 # 1. Load HumanML3D

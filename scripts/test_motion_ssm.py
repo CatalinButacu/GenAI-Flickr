@@ -17,7 +17,8 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
-from src.modules.m4_motion_generator.train import TextToMotionSSM, TrainingConfig
+from src.modules.m4_motion_generator.nn_models import TextToMotionSSM
+from src.modules.m4_motion_generator.trainer import TrainingConfig
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

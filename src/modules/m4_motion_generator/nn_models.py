@@ -22,7 +22,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
-from src.ssm import MambaLayer, SSMConfig
+from src.modules.m4_motion_generator.ssm import MambaLayer, SSMConfig
 
 
 class SimpleTextEncoder(nn.Module):

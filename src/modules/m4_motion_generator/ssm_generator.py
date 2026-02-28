@@ -27,7 +27,7 @@ from src.shared.vocabulary import ACTIONS
 
 log = logging.getLogger(__name__)
 
-from src.ssm import MotionSSM, PhysicsSSM, SimpleSSMNumpy, HAS_TORCH
+from src.modules.m4_motion_generator.ssm import MotionSSM, PhysicsSSM, SimpleSSMNumpy, HAS_TORCH
 
 
 @dataclass(slots=True)
