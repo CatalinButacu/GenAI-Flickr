@@ -92,7 +92,18 @@ class Scene:
             if self.client < 0:
                 log.error("PyBullet connection failed")
                 return False
-            
+
+            # Try GPU-accelerated offscreen rendering via EGL plugin
+            if not use_gui:
+                try:
+                    import pkgutil
+                    egl = pkgutil.get_loader("eglRenderer")
+                    if egl:
+                        p.loadPlugin(egl.get_filename(), "_eglRendererPlugin")
+                        log.info("EGL GPU renderer loaded — fast offscreen rendering")
+                except Exception:
+                    log.debug("EGL renderer not available — using CPU TinyRenderer")
+
             p.setAdditionalSearchPath(pybullet_data.getDataPath())
             p.setGravity(0, 0, self.gravity)
             p.setRealTimeSimulation(0)
