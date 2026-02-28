@@ -21,6 +21,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from src.shared.constants import GRAVITY
 from src.shared.mem_profile import profile_memory, tracemalloc_snapshot
 from src.modules.m7_render_engine import RenderEngine, RenderSettings
 
@@ -222,7 +223,7 @@ class Pipeline:
                         (clip.frames.shape[0], 64), dtype=np.float32,
                     )
                     # Encode basic physics priors: gravity, height, momentum
-                    physics_state[:, 0] = -9.81       # gravity Z
+                    physics_state[:, 0] = GRAVITY     # gravity Z
                     if clip.raw_joints is not None:
                         pelvis_h = clip.raw_joints[:, 0, 1] / 1000.0  # mm→m
                         physics_state[:, 1] = pelvis_h
@@ -275,7 +276,7 @@ class Pipeline:
         )
         from src.shared.vocabulary import OBJECTS
 
-        scene = Scene(gravity=-9.81)
+        scene = Scene(gravity=GRAVITY)
         scene.setup()
         scene.add_ground()
         self._populate_scene_primitives(scene, planned.entities, OBJECTS)

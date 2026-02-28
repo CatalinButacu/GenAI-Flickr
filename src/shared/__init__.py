@@ -13,6 +13,15 @@
     ColorName, SpatialRelation enums; lookup helpers.
 """
 
+from .constants import (
+    GRAVITY,
+    DEFAULT_FPS,
+    DEFAULT_DURATION,
+    DEFAULT_PHYSICS_HZ,
+    DEFAULT_PHYSICS_SSM_CHECKPOINT,
+    DEFAULT_MOTION_SSM_CHECKPOINT,
+)
+
 from .vocabulary import (
     # Actions
     ACTIONS,

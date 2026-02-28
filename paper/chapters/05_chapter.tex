@@ -1,0 +1,48 @@
+\chapter{Experimente și rezultate}
+\label{chap:experimente}
+
+\textit{Acest capitol va fi completat cu rezultate cantitative după finalizarea antrenării PhysicsSSM.  Structura este pregătită.}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Benchmark M1 --- Calitatea parsării}
+
+TODO: rezultate din \texttt{scripts/benchmark\_m1\_quality.py} pe 200 de propoziții.
+
+Metrici:
+\begin{itemize}
+    \item Entity extraction F1
+    \item Action classification accuracy
+    \item Spatial relation detection accuracy
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Benchmark M4 --- Calitatea mișcării}
+
+TODO: FID, diversity, foot sliding rate.
+
+Comparație:
+\begin{itemize}
+    \item MotionSSM fără PhysicsSSM (ablation)
+    \item MotionSSM cu PhysicsSSM (modelul nostru)
+    \item Raw KIT-ML retrieval (baseline)
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Benchmark M5 --- Aderența fizică}
+
+TODO: ground penetration rate, contact consistency, self-collision events.
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Pipeline end-to-end}
+
+TODO: 10 propoziții test, timp de procesare per propoziție, frame rate, calitate vizuală.
+
+\begin{itemize}
+    \item Showcase v4: 10 video-uri generate cu succes la 24 fps, durata 6 secunde fiecare
+    \item Timp mediu per video: $\sim$45 secunde pe RTX 3050
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Analiza calitativă}
+
+TODO: capturi de ecran din video-uri generate, comparație vizuală înainte/după PhysicsSSM.

@@ -83,30 +83,6 @@ class VideoRenderer:
             ).images[0]
         return np.array(result)
 
-    def enhance_frames(self, frames: List, prompt: str,
-                       negative_prompt: str = "blurry, low quality",
-                       num_steps: int = 15, guidance_scale: float = 7.5,
-                       controlnet_scale: float = 0.8,
-                       progress_callback=None) -> List[EnhancedFrame]:
-        if not self._ready:
-            return []
-        enhanced = []
-        for i, frame in enumerate(frames):
-            enhanced.append(EnhancedFrame(
-                original_rgb=frame.rgb,
-                enhanced_rgb=self.enhance_frame(
-                    frame.depth, prompt, negative_prompt,
-                    num_steps, guidance_scale, controlnet_scale
-                ),
-                depth=frame.depth,
-                timestamp=frame.timestamp,
-            ))
-            if progress_callback:
-                progress_callback(i + 1, len(frames))
-            if (i + 1) % 10 == 0:
-                log.info("Enhanced %d/%d", i + 1, len(frames))
-        return enhanced
-
     def create_video(self, frames: List[EnhancedFrame], output_path: str,
                      fps: int = 24, comparison: bool = True) -> str:
         import imageio

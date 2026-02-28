@@ -1,0 +1,185 @@
+\chapter{Formatting details for \LaTeX}
+\label{chap:div}
+
+\myLettrine{T}{he} current material uses as a template the "scrrprt" class to which the usual packages and commands have been added.
+
+To keep the structure as compact as possible, the source files have been divided into the following categories:
+
+\begin{description}[style=nextline]
+\item[thesis.tex] represents the \textquote{main} file in which all other files are called
+\item[standard.sty] contains commonly used packages and commands
+\item[bib.bib] contains some references in \emph{bibtext} format;
+\item[gls.tex] contains glossary terms that can be added to a \textquote{Terms List} if deemed necessary
+\end{description}
+Comments and brief explanations about the role of packages and commands can be found in these source files.
+
+Additionally, the following folder structure was used:
+\begin{description}[style=nextline]
+\item[cls] for storing auxiliary source files (for introducing packages/bibliographic references, etc.)
+\item[pics] for storing the images that will be added to the manuscript
+\item[chapters] for storing chapter files
+
+\end{description}
+
+\begin{rem}
+\label{rem:at}
+If you want to modify the structure mentioned above, more attention should be paid to the references made within the files. \eor
+\end{rem}
+
+The files were compiled using the Miktex 2.9 distribution (\url{http://miktex.org/2.9/setup}), with the help of the TexnicCenter (\url{http://www.texniccenter.org/}) text editor. General details about LATEX can be found at \url{http://tobi.oetiker.ch/lshort/lshort.pdf}. Below are some typical situations.
+
+\section{Floats examples}
+
+In this section, some "float" constructions will be exemplified. In general, each float can be associated with a legend type element to give a detailed explanation and a label type element, which will allow the reference to this float within the manuscript as well as its enumeration within the associated list (for example, in the list of figures, all the figures defined in the manuscript will appear).
+
+
+\subsection{Tables}
+
+Additional information about tables can be found in \url{http://en.wikibooks.org/wiki/LaTeX/Tables}.
+
+\begin{table}[ht]
+\begin{tabular}{llll}
+\hline
+Fault & Fault & Symbol & Type\\ 
+No. & & & \\
+\hline
+1 & Sensor Fault & $\Delta\beta_{1,m1}$ & Fixed Value\\
+2 & Sensor Fault & $\Delta\beta_{2,m2}$ & Gain Factor\\
+3 & Sensor Fault & $\Delta\beta_{3,m1}$ & Fixed Value\\
+4 & Sensor Fault & $\Delta\beta_{4,m1}$ & Fixed Value\\
+5 & Sensor Fault & $\Delta\omega_{r,m1}$ & Fixed Value\\
+6 & Sensor Fault & $\Delta\omega_{r,m2}$ & Fixed Value\\
+7 & Sensor Fault & $\Delta\omega_{r,m2}$, $\Delta\omega_{g,m2}$ & Gain Factor\\ 
+\hline
+\end{tabular}
+\centering
+\caption{Faults affecting the wind turbine model}%Considered Faults}
+\label{tab:faults}
+\end{table}
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+no. of hyperplanes&5&10&15&20&25&50&100\\ \hline
+classical&9.91&64.06&91.74&511.47&306.04&$\cdots$&$\cdots$\\ \hline
+enhanced&1.14&0.81&0.59&4.84&4.18&3.66&2.94\\ \hline
+\end{tabular}
+\end{center}
+\caption{Numerical values for the solving of an MI optimization problem under classical and anhanced methods.}
+\label{tab:run}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{||c c c c||} 
+ \hline
+ Col1 & Col2 & Col2 & Col3 \\ [0.5ex] 
+ \hline\hline
+ 1 & 6 & 87837 & 787 \\ 
+ 2 & 7 & 78 & 5415 \\
+ 3 & 545 & 778 & 7507 \\
+ 4 & 545 & 18744 & 7560 \\
+ 3 & 545 & 778 & 7507 \\
+ 4 & 545 & 18744 & 7560 \\
+ 1 & 6 & 87837 & 787 \\ 
+3 & 545 & 778 & 7507 \\
+1 & 6 & 87837 & 787 \\
+ 5 & 88 & 788 & 6344 \\ [1ex] 
+ \hline
+\end{tabular}
+\caption{This is the caption for the table.}
+\label{table:5}
+\end{table}
+
+\subsection{Figures}
+
+Additional information about figures can be found in \url{http://en.wikibooks.org/wiki/LaTeX/Floats,_Figures_and_Captions}.
+
+Figure~\ref{figCoord} illustrates a simple example (a single figure) and Figure~\ref{figRosy} uses the "subfig" package, which allows a table structure with several sub-figures.
+
+\begin{rem}
+The size of a figure is determined by the optional 'width' argument. It was preferred to use macros (\verb+\singlefigure+ and \verb+\triplefigure+) rather than \textquote{hard-coded} values due to their flexibility. By changing (in \emph{standard.sty}) the value of such a macro the dimensions of the figures that use it will change automatically, without the need to modify each one separately.\eor
+\end{rem}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=10 cm]{pics/doc/coordonate.jpeg}
+\caption{Cartesian coordinates system.}\label{figCoord}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+    \begin{minipage}{0.27\textwidth}
+        \centering
+        \hbox{\hspace{3em}
+            \includegraphics[width=\textwidth]{pics/doc/mecanum.jpeg}
+        } 
+        \hbox{\hspace{8em}
+             (a)
+        } 
+        \label{Mecanum}
+    \end{minipage}
+    \begin{minipage}{0.44\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{pics/doc/holonomicRob.png}
+        \label{Rosy} (b)
+    \end{minipage}
+    \caption{\textbf{(a)} Mecanum wheel; \textbf{(b)} Holonomic robot.}\label{figRosy}
+\end{figure}
+
+\subsection{Algorithms}
+
+In the example below, \algref{alg:run} uses the \textquote{algorithm2e} package to write an algorithm. By changing the options (in \emph{standard.sty}) it is possible to change the structure/introduce new keywords/etc.
+
+\begin{algorithm2e}
+\caption{Fault tolerant scheme}
+\label{alg:run}
+\KwIn{$\mathcal{I}=\mathcal{I}_H(0)\cup \mathcal{I}_F(0);\quad\mathcal{I}_H(0)\neq \emptyset$}
+$k \leftarrow$ the current sampling time\;
+\ForEach{sensor $i\in \mathcal{I}_F(k-1)$}{
+	\If{$r_i(k-1)\in R_i^F$ and $r_i(k) \in R_i^H$}{compute a timer $\bar \theta_i$ \;}
+	}
+\end{algorithm2e}
+
+\section{Bibliography}
+
+The bibliography is extracted from a \textquote{*.bib} file where articles/books/conferences are stored in bibtex format (further details can be found at \url{http://en.wikibooks.org/wiki/LaTeX/Bibliography_Management}). An example of such an entry is:
+
+\begin{verbatim}
+@article{gilbert1991linear,
+ title={{Linear systems with state and control constraints: the theory and application of maximal output admissible sets}},
+ author={Gilbert, EG and Tan, KT},
+ journal={IEEE Transactions on Automatic Control},
+ volume={36},
+ number={9},
+ pages={1008--1020},
+ year={1991}
+}
+\end{verbatim}
+
+The \textquote{biblatex} package was used for in-text citation and listing of cited entries in the bibliography. Within this package, the most common citation commands are as follows:
+
+\begin{description}[style=nextline]
+\item[simple cite] \verb+\cite{...}+: \cite{bitsoris2006invariance}
+\item[citation in parentheses] \verb+\parencite{...}+: \parencite{gilbert1991linear}
+\item[citation with the year in brackets] \verb+\textcite{...}+: \textcite{loechner1999polylib}
+\item[multiple entry citation] \verb+\cite{..., ..., ...}+: \cite{bellingham2002receding,garey1979computers,vitus_tunnel-milp:_2008,camponogara2002distributed}
+\end{description}
+
+\section{Listings}
+
+With the help of the \textit{listings} package it is possible to display code fragments relevant to the document by referring to an existing source file (which means that any changes to it will automatically be reflected in the displayed text).
+
+Example: Listing~\ref{lst:cod_inst}.
+
+\begin{lstlisting}[caption={Instantiation of the digital twin.},label=lst:cod_inst,frame=single,breaklines]
+public void HideAndInstantiate()
+    {
+        simplifiedRosy.SetActive(false);
+        okButton.SetActive(false);
+        instantiatedRosy = Instantiate(rosyPrefab, gameObject.transform);
+        instantiatedRosy.transform.localPosition = simplifiedRosy.transform.localPosition;
+        instantiatedRosy.transform.localRotation = simplifiedRosy.transform.localRotation;
+    }
+\end{lstlisting}

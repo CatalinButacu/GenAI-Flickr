@@ -33,6 +33,8 @@ __pycache__/
 dist/
 build/
 .eggs/
+.coverage
+htmlcov/
 
 # ─── Virtual environments ────────────────────────────────────────────────────
 venv/
@@ -66,3 +68,18 @@ assets/objects/
 *.gltf
 *.dae
 *.urdf
+
+# ─── LaTeX build artifacts ───────────────────────────────────────────────────
+paper/*.aux
+paper/*.bbl
+paper/*.bcf
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.pdf
+paper/*.run.xml
+paper/*.toc
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+*.bak

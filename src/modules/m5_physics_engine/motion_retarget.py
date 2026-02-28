@@ -116,14 +116,6 @@ def _signed_plane_angle(
     return float(angle)
 
 
-def _axis_angle_to_quat(axis: np.ndarray, angle: float) -> Tuple[float, float, float, float]:
-    """Returns (x, y, z, w) quaternion for PyBullet."""
-    axis = _norm(axis)
-    s = np.sin(angle / 2.0)
-    return (float(axis[0] * s), float(axis[1] * s),
-            float(axis[2] * s), float(np.cos(angle / 2.0)))
-
-
 def _mat_to_quat(rot_mat: np.ndarray) -> Tuple[float, float, float, float]:
     """3x3 rotation matrix to (x, y, z, w) quaternion."""
     trace = rot_mat[0, 0] + rot_mat[1, 1] + rot_mat[2, 2]

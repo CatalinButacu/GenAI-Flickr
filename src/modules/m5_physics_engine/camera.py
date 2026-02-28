@@ -129,17 +129,6 @@ class CinematicCamera:
             "start_time": start_time, "duration": duration, "easing": easing,
         })
 
-    def add_pan(self, start_target: List[float] = None,
-                end_target: List[float] = None,
-                start_time: float = 0.0, duration: float = 2.0,
-                easing: str = "smooth"):
-        self.effects.append({
-            "type": "pan",
-            "start_target": start_target or list(self.base_target),
-            "end_target": end_target or [0, 0, 0.5],
-            "start_time": start_time, "duration": duration, "easing": easing,
-        })
-
     # ── update loop ──────────────────────────────────────────────
 
     def update(self, time: float):

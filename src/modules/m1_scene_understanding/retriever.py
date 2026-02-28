@@ -75,10 +75,6 @@ class KBEntry:
     def mesh_prompt(self) -> str:
         return self._data.get("mesh_prompt", "")
 
-    @property
-    def related_objects(self) -> List[str]:
-        return self._data.get("related_objects", [])
-
     def __repr__(self) -> str:
         return f"KBEntry(name={self.name!r}, category={self.category!r})"
 
@@ -165,6 +161,17 @@ class KnowledgeRetriever:
             faiss.normalize_L2(vecs)
             self._index = faiss.IndexFlatIP(vecs.shape[1])
             self._index.add(vecs)
+            # Persist so future runs skip re-encoding
+            self.save_index()
+
+    def save_index(self) -> None:
+        """Persist the FAISS index to disk."""
+        if self._index is None:
+            return
+        index_path = self._kb_dir / "embeddings" / "object_index.faiss"
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        faiss.write_index(self._index, str(index_path))
+        log.info("FAISS index saved → %s", index_path)
 
     def _vector_search(self, query: str, top_k: int) -> List[KBEntry]:
         q = self._encoder.encode([query], convert_to_numpy=True).astype(np.float32)

@@ -100,7 +100,7 @@ class PhysicsSSM(nn.Module):
         d_model: int = 256,
         d_state: int = 32,
         d_physics: int = 64,
-        gravity: float = -9.81,
+        gravity: float = -9.81,  # matches shared.constants.GRAVITY
     ):
         super().__init__()
         self.d_model = d_model

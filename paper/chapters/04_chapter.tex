@@ -1,0 +1,153 @@
+\chapter{Implementare}
+\label{chap:implementare}
+
+Acest capitol descrie codul, datele și procesul de antrenare.  Toate cifrele sunt reale --- extrase direct din loguri, nu estimate.
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Mediu de dezvoltare}
+
+\begin{itemize}
+    \item \textbf{Hardware}: NVIDIA RTX 3050 (4 GB VRAM), 16 GB RAM DDR4, Intel i5-12th gen
+    \item \textbf{Software}: Python 3.12.8, PyTorch 2.5, CUDA 12.4, Windows 11
+    \item \textbf{Dependențe cheie}: PyBullet 3.2.6, sentence-transformers, FAISS-cpu, imageio, scipy, transformers (HuggingFace)
+    \item \textbf{Versionare}: Git, GitHub (\texttt{CatalinButacu/GenAI-Flickr})
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Structura codului}
+
+Codebase-ul are \textbf{9.208 linii de Python} distribuite astfel:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l r}
+\hline
+\textbf{Director} & \textbf{Linii} \\
+\hline
+M5 --- Physics Engine & 2.072 \\
+M1 --- Scene Understanding & 1.730 \\
+M4 --- Motion Generator & 1.638 \\
+M4 --- SSM submodule & 580 \\
+M8 --- AI Enhancer & 813 \\
+pipeline.py (orchestrator) & 670 \\
+M2 --- Scene Planner & 597 \\
+shared/ (constante, vocabular) & 387 \\
+M3 --- Asset Generator & 262 \\
+data/ (data loading) & 227 \\
+M7 --- Render Engine & 219 \\
+\hline
+\textbf{Total} & \textbf{9.208} \\
+\hline
+\end{tabular}
+\caption{Distribuția liniilor de cod pe module}
+\label{tab:loc}
+\end{table}
+
+Fiecare fișier Python are un header standard cu patru câmpuri:
+\begin{itemize}
+    \item \texttt{\#WHERE} --- cine îl apelează
+    \item \texttt{\#WHAT} --- ce face
+    \item \texttt{\#INPUT} --- ce primește
+    \item \texttt{\#OUTPUT} --- ce produce
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Datele de antrenare}
+
+\subsection{KIT Motion Language (KIT-ML)}
+
+Datasetul principal pentru generarea de mișcare:
+\begin{itemize}
+    \item \textbf{4.888 secvențe} de motion capture la 20 fps
+    \item \textbf{251 dimensiuni} per cadru (unghiuri articulare, poziție root, velocitate)
+    \item Fiecare secvență are una sau mai multe descrieri text în engleză
+    \item Split: 4.886 antrenare / 300 validare (2 secvențe cu lungime 0 excluse)
+\end{itemize}
+
+\subsection{Starea fizică derivată}
+
+Pentru antrenarea PhysicsSSM, derivăm un vector de stare fizică de 64 dimensiuni din datele KIT-ML:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c l}
+\hline
+\textbf{Canal} & \textbf{Semnificație} \\
+\hline
+0       & Gravitație ($-9{,}81$ m/s\textsuperscript{2}) \\
+1       & Înălțimea pelvisului (m) \\
+2       & Viteza verticală pelvis (m/s) \\
+3--5    & Viteza root XYZ \\
+6--8    & Accelerația root XYZ \\
+9       & Energia cinetică normalizată \\
+10--11  & Contactul picior stâng / drept (binar estimat) \\
+12--23  & Zero-padding (rezervat) \\
+24--63  & Zero-padding (extensii viitoare) \\
+\hline
+\end{tabular}
+\caption{Formatul vectorului de stare fizică (64 dimensiuni)}
+\label{tab:physics_state}
+\end{table}
+
+\subsection{Baza de cunoștințe (Knowledge Base)}
+
+12 obiecte curate din Visual Genome, fiecare cu:
+\begin{itemize}
+    \item Nume canonic și aliasuri
+    \item Dimensiuni tipice (H $\times$ W $\times$ L în metri)
+    \item Masa (kg), materialul, coeficienți de frecare și restituție
+    \item Prompt pentru generare mesh 3D
+\end{itemize}
+
+Index FAISS persistent (\texttt{IndexFlatIP}, cosine similarity) peste embedding-uri Sentence-BERT (384-dim).
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Antrenarea M1 --- T5 Parser}
+
+\begin{itemize}
+    \item Model: T5-small (60M parametri), pre-antrenat de Google
+    \item Fine-tuning: 5 epoci, AdamW, learning rate $5 \times 10^{-5}$, amestec de triplete text$\rightarrow$JSON
+    \item \textbf{Pierdere finală}: 0.062
+    \item Checkpoint: \texttt{m1\_checkpoints/m1\_scene\_extractor\_v5}
+    \item Timp de antrenare: $\sim$30 minute pe RTX 3050
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Antrenarea M4 --- MotionSSM}
+
+\begin{itemize}
+    \item Model: MotionSSM (4 straturi Mamba, $d_{\text{model}} = 256$, $d_{\text{state}} = 32$)
+    \item Date: 4.886 secvențe KIT-ML
+    \item 250 de epoci, batch size 16, AdamW, lr $5 \times 10^{-5}$
+    \item \textbf{Pierderea cea mai bună}: 0.37 (validare)
+    \item Checkpoint: \texttt{checkpoints/motion\_ssm/best\_model.pt}
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────
+\section{Antrenarea M4 --- PhysicsSSM (contribuția originală)}
+
+\begin{itemize}
+    \item Model: MotionSSM + PhysicsSSM + MotionProjector (2.789.275 parametri total)
+    \item Funcția de pierdere: $\mathcal{L}_{\text{recon}} + 0{,}1 \cdot \mathcal{L}_{\text{fizică}}$
+    \item Warmup: 500 de pași, OneCycleLR
+    \item Early stopping cu patience = 15 epoci
+\end{itemize}
+
+Convergența observată (primele epoci):
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c c c c c}
+\hline
+\textbf{Epocă} & \textbf{Train Loss} & \textbf{Val Loss} & \textbf{Val Recon} & \textbf{Val Physics} \\
+\hline
+1  & 0.4593 & 0.2749 & 0.2539 & 0.2106 \\
+2  & 0.1932 & 0.1217 & 0.1006 & 0.2113 \\
+3  & 0.1229 & 0.0969 & 0.0757 & 0.2117 \\
+\hline
+\end{tabular}
+\caption{Convergența PhysicsSSM (primele 3 epoci)}
+\label{tab:physics_ssm_convergence}
+\end{table}
+
+\textit{Notă: antrenarea continuă. Tabelul va fi actualizat cu rezultatele finale.}

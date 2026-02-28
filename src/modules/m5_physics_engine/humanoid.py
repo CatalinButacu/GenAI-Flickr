@@ -33,14 +33,6 @@ class HumanoidConfig:
     fixed_base: bool          = False
 
 
-@dataclass(slots=True)
-class HumanoidState:
-    position: Tuple[float, float, float]
-    orientation: Tuple[float, float, float, float]
-    joint_positions: Dict[str, float]
-    joint_velocities: Dict[str, float]
-
-
 class HumanoidBody:
     """Loads and drives a humanoid URDF inside a PyBullet scene."""
 
@@ -107,14 +99,6 @@ class HumanoidBody:
                     physicsClientId=self._client,
                 )
 
-    def get_state(self) -> HumanoidState:
-        pos, orn = p.getBasePositionAndOrientation(self.body_id, physicsClientId=self._client)
-        jp, jv = {}, {}
-        for name, info in self._joint_info.items():
-            s = p.getJointState(self.body_id, info["index"], physicsClientId=self._client)
-            jp[name], jv[name] = s[0], s[1]
-        return HumanoidState(position=pos, orientation=orn, joint_positions=jp, joint_velocities=jv)
-
     def get_link_world_positions(self) -> Dict[str, np.ndarray]:
         """
         Return the world-space 3D position (CoM) of every link after physics.
@@ -159,23 +143,6 @@ class HumanoidBody:
                     for c in raw
                 ]
         return contacts
-
-    def apply_motion_frame(self, joint_angles: Dict[str, float], use_motors: bool = True) -> None:
-        (self.set_joint_position_targets if use_motors else self.set_joint_positions)(joint_angles)
-
-    def get_joint_names(self) -> List[str]:
-        return list(self._joint_info.keys())
-
-    def reset_pose(self, pose: str = "t_pose") -> None:
-        poses = {
-            "t_pose": dict.fromkeys(self._joint_info, 0.0),
-            "stand": {"left_hip_x": 0.0, "left_hip_y": 0.0, "left_knee": 0.0,
-                      "right_hip_x": 0.0, "right_hip_y": 0.0, "right_knee": 0.0},
-        }
-        if pose in poses:
-            self.set_joint_positions(poses[pose])
-        else:
-            log.warning("Unknown pose: %s", pose)
 
 
 def load_humanoid(scene, name: str = "humanoid_1", position: List[float] = None) -> HumanoidBody:

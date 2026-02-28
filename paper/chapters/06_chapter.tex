@@ -1,0 +1,33 @@
+\chapter{Concluzii}
+\label{chap:concluzii}
+
+\section{Contribuții}
+
+\begin{enumerate}
+    \item \textbf{PhysicsSSM} --- o arhitectură originală care amestecă modelarea temporală SSM cu constrângeri fizice printr-o poartă sigmoid învățată.  Antrenat pe KIT-ML cu pierdere de reconstrucție + penalizare de încălcări fizice.
+    
+    \item \textbf{Pipeline end-to-end text-to-physics-video} --- un sistem modular (M1--M8) care transformă o propoziție în video fizic verificat, fără intervenție umană.
+    
+    \item \textbf{Detecție de contact în buclă} --- integrarea interogărilor de contact PyBullet în bucla de simulare, cu clasificare sol/obiect și logare a forțelor.
+    
+    \item \textbf{Knowledge retrieval cu FAISS} --- îmbogățirea semantică a entităților cu proprietăți fizice din Visual Genome.
+\end{enumerate}
+
+\section{Limitări}
+
+\begin{itemize}
+    \item Humanoidul folosește Root State Injection (teleportare), nu forțe aplicate --- mișcarea nu este complet fizică
+    \item Baza de cunoștințe conține doar 12 obiecte curate
+    \item PhysicsSSM are 2.8M parametri --- un model mai mare ar putea fi mai expresiv, dar RTX 3050 limitează capacitatea
+    \item Modulele M3 (Shap-E) și M8 (ControlNet) sunt opționale din cauza limitărilor VRAM
+\end{itemize}
+
+\section{Direcții viitoare}
+
+\begin{itemize}
+    \item Înlocuirea RSI cu forțe aplicate (physics-driven locomotion)
+    \item Extinderea bazei de cunoștințe la 1000+ obiecte din Visual Genome complet
+    \item Antrenarea pe Human3.6M și AMASS pentru diversitate mai mare
+    \item Integrarea cu modele text-to-3D mai recente (InstantMesh, DreamGaussian)
+    \item Studiul ablativ complet: PhysicsSSM vs. MotionSSM vs. difuzie
+\end{itemize}

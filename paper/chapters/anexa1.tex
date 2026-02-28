@@ -1,0 +1,24 @@
+\chapter{Anexa: Structura repository-ului}
+\label{chap:anexa}
+
+\begin{verbatim}
+GenAI-Flickr/
+|-- src/
+|   |-- pipeline.py              # Orchestratorul principal
+|   |-- shared/                  # Constante, vocabular, utilitati
+|   |-- data/                    # Data loaders (KIT-ML)
+|   +-- modules/
+|       |-- m1_scene_understanding/  # T5 parser + FAISS retriever
+|       |-- m2_scene_planner/        # scipy L-BFGS-B
+|       |-- m3_asset_generator/      # Shap-E (optional)
+|       |-- m4_motion_generator/     # SSM + PhysicsSSM
+|       |   +-- ssm/                 # Mamba, S4, composites
+|       |-- m5_physics_engine/       # PyBullet, humanoid, contact
+|       |-- m7_render_engine/        # Motion blur, DoF, grading
+|       +-- m8_ai_enhancer/          # ControlNet + AnimateDiff
+|-- scripts/                     # Antrenare, evaluare
+|-- tests/                       # Unit tests + benchmarks
+|-- checkpoints/                 # Modele antrenate
+|-- data/                        # KIT-ML, knowledge base
++-- paper/                       # Aceasta lucrare (LaTeX)
+\end{verbatim}

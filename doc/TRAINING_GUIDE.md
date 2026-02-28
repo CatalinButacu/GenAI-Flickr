@@ -1,283 +1,193 @@
-# Training and Finetuning Requirements
+# Training and Finetuning Guide
 
-This document outlines which components require training, available datasets, and recommended approaches.
-
----
-
-## Overview: Training Requirements
-
-| Component | Needs Training? | Pretrained Available? | Dataset |
-|-----------|-----------------|----------------------|---------|
-| M1: Prompt Parser | ❌ No (rule-based) | N/A | - |
-| M2: Scene Planner | ❌ No (heuristics) | N/A | - |
-| M3: Asset Generator | ✓ Optional | ✅ Shap-E | ShapeNet |
-| **M4: Motion Generator** | ✅ **Yes** | ✅ MDM/MLD | **HumanML3D** |
-| M5: Physics Engine | ❌ No (simulation) | N/A | - |
-| **M6: RL Controller** | ✅ **Yes** | Partial | MuJoCo Humanoid |
-| M7: Render Engine | ❌ No (PyBullet) | N/A | - |
-| M8: AI Enhancer | ✓ Optional | ✅ ControlNet | LAION |
-| **SSM Layers** | ✅ **Yes (our contrib)** | ❌ No | **HumanML3D** |
+This document describes the training status and procedures for each module.
 
 ---
 
-## 1. Motion Generator (M4) - HIGH PRIORITY
+## Overview
 
-### What Needs Training
+| Component | Needs Training? | Status | Dataset | Script |
+|-----------|:-:|--------|---------|--------|
+| M1: T5 Scene Parser | Yes | **Trained** (v5, loss=0.062) | m1_training (40k) | `scripts/train_m1_t5.py` |
+| M1: Prompt Parser | No | Rule-based fallback | — | — |
+| M1: KB Retriever | No | Pretrained SBERT + FAISS | knowledge_base | — |
+| M2: Scene Planner | No | Deterministic solver | — | — |
+| M3: Asset Generator | No | Pretrained Shap-E/TripoSR | — | — |
+| M4: Motion SSM | Yes | **Trained** (250 ep, loss=0.37) | KIT-ML (4.9k) | `scripts/train_motion_ssm.py` |
+| M4: KIT-ML Retriever | No | SBERT semantic search | KIT-ML | — |
+| **M4: PhysicsSSM** | **Yes** | **Training** | KIT-ML + derived physics | `scripts/train_physics_ssm.py` |
+| M5: Physics Engine | No | PyBullet simulation | — | — |
+| M7: Render Engine | No | OpenCV post-processing | — | — |
+| M8: AI Enhancer | No | Pretrained SD+ControlNet | — | — |
 
-The motion generator converts text → joint angles. Current implementation uses:
+---
 
-- **Placeholder**: Sine waves (no training, low quality)
-- **MDM**: Pretrained available (high quality)
-- **SSM (ours)**: Needs training (novel contribution)
+## 1. M1 Scene Parser (T5) — DONE
 
-### Datasets
+Fine-tuned `google/flan-t5-small` for text → JSON scene extraction.
 
-#### HumanML3D (Recommended)
+### Training History
 
-- **Paper**: <https://arxiv.org/abs/2205.01061>
-- **Size**: 14,616 motions, 44,970 text descriptions
-- **Format**: SMPL joint angles + text pairs
-- **Download**: <https://github.com/EricGuo5513/HumanML3D>
+| Version | Epochs | Eval Loss | Notes |
+|---------|--------|-----------|-------|
+| v1 | 3 | NaN | Failed run |
+| v2 | 10 | 0.089 | First successful |
+| v3 | 10 | 0.072 | More data |
+| v4 | 12 | 0.068 | Hyperparameter sweep |
+| **v5** | **15** | **0.062** | **Current best** |
+
+### How to Retrain
+
+```bash
+python scripts/train_m1_t5.py \
+    --epochs 15 --batch-size 4 --lr 5e-5 \
+    --data-dir data/m1_training \
+    --output-dir m1_checkpoints/m1_scene_extractor_v6
+```
+
+**Data:** `data/m1_training/` — 40,000 train samples (.jsonl, 35.5 MB).
+**Source:** Built from Visual Genome (`data/M1_VisualGenome/`, 4.85 GB) via `scripts/build_vg_dataset.py`.
+**Checkpoint:** `m1_checkpoints/m1_scene_extractor_v5/model.safetensors` (293 MB).
+
+---
+
+## 2. M4 Motion SSM — DONE
+
+Custom `TextToMotionSSM`: SimpleTextEncoder → 4× MambaLayer → MotionDecoder.
+
+### Training Details
+
+- **Data:** KIT-ML — 4,886 train / 300 val samples, 251-dim joint vectors at 20 fps
+- **Architecture:** d_model=256, d_state=32, n_layers=4, vocab≈10k
+- **Optimizer:** AdamW + OneCycleLR, lr=5e-5, weight_decay=0.01
+- **Duration:** 250 epochs, ~76,500 steps
+- **Final:** train_loss=0.381, val_loss=0.371
+- **Checkpoint:** `checkpoints/motion_ssm/best_model.pt` (58 MB)
+
+### How to Retrain
+
+```bash
+python scripts/train_motion_ssm.py \
+    --epochs 250 --batch-size 16 --lr 5e-5 \
+    --data-dir data/KIT-ML --device cuda
+```
+
+---
+
+## 3. M4 PhysicsSSM — NOVEL CONTRIBUTION
+
+**Novel contribution:** Learned sigmoid gate blending SSM temporal modelling
+with physics constraints:
 
 ```
-data/HumanML3D/
-├── new_joint_vecs/     # Joint angle sequences
-├── new_joints/         # 3D joint positions  
-├── texts/              # Text descriptions
-└── Mean.npy, Std.npy   # Normalization stats
+gate = σ(W [ssm_out ; physics_embed])
+output = gate · ssm_out + (1 - gate) · constraints
 ```
 
-#### KIT-ML (Alternative)
+### Architecture
 
-- **Paper**: <https://arxiv.org/abs/1609.04733>
-- **Size**: 3,911 motions
-- **Use**: Smaller, faster experiments
+Three jointly-trained components:
+1. **MotionProjector** — learned encode/decode between motion space (251-dim) and latent (256-dim)
+2. **MotionSSM** — 4-layer Mamba stack for temporal modelling
+3. **PhysicsSSM** — physics encoder + constraint projection + sigmoid gate
 
-### Training Plan for SSM Motion
+### Training Objective
 
-```python
-# Pseudo-code for training SSM motion generator
+```
+L_total = L_reconstruction + λ · L_physics
 
-from src.modules.m4_motion_generator.ssm import MotionSSM
-from src.motion_generator import SSMMotionConfig
+L_reconstruction = MSE(predicted_motion, target_motion)
+L_physics = foot_sliding_penalty + ground_penetration + jerk_smoothness
+```
 
-# 1. Load HumanML3D
-train_data = load_humanml3d("data/HumanML3D")
+### Physics State (64-dim, derived from motion data)
 
-# 2. Create model
-config = SSMMotionConfig(d_model=256, d_state=32, n_layers=4)
-model = MotionSSM(**config)
+| Channels | Description |
+|----------|-------------|
+| [0] | Gravity prior (-9.81) |
+| [1] | Pelvis height |
+| [2] | Pelvis vertical velocity |
+| [3] | Pelvis vertical acceleration |
+| [4:7] | Root linear velocity (XYZ) |
+| [7:10] | Root angular velocity |
+| [10:12] | Estimated foot contacts (L/R) |
+| [12:15] | Centre-of-mass velocity |
+| [15:18] | Centre-of-mass acceleration |
+| [18:21] | Root position (XYZ) |
+| [21:24] | Angular momentum proxy |
+| [24:64] | Reserved (zero-padded) |
 
-# 3. Training loop
-for epoch in range(100):
-    for text, motion in train_data:
-        # Forward pass
-        pred = model(text_embedding)
-        
-        # Loss: MSE on joint angles
-        loss = mse_loss(pred, motion)
-        
-        # Backward
-        loss.backward()
-        optimizer.step()
+### How to Train
+
+```bash
+python scripts/train_physics_ssm.py \
+    --epochs 100 --batch-size 16 --lr 5e-5 \
+    --lambda-physics 0.1 --device cuda
 ```
 
 ### Estimated Training Time
 
 | Hardware | Epochs | Time |
 |----------|--------|------|
-| RTX 3080 | 100 | ~12 hours |
-| RTX 4090 | 100 | ~6 hours |
-| CPU only | 100 | ~3 days |
+| RTX 3050 4GB | 100 | ~60 hours |
+| RTX 3080 10GB | 100 | ~15 hours |
+| RTX 4090 24GB | 100 | ~5 hours |
+
+**Checkpoint:** `checkpoints/physics_ssm/best_model.pt`
+**Loaded by:** `SSMMotionGenerator._load_checkpoint()` in `ssm_generator.py`
 
 ---
 
-## 2. RL Controller (M6) - MEDIUM PRIORITY
+## 4. Knowledge Base Retriever — READY
 
-### What Needs Training
+Uses pretrained `all-MiniLM-L6-v2` (SBERT) + FAISS IndexFlatIP.
 
-Reinforcement learning for robust humanoid locomotion:
+- **Data:** `data/knowledge_base/objects/common_objects.json` (12 curated entries)
+- **Index:** Built automatically on first `setup()`, saved to `data/knowledge_base/embeddings/object_index.faiss`
+- **No training needed** — pretrained SBERT embeddings are sufficient
 
-- Walking on uneven terrain
-- Recovery from perturbations
-- Object manipulation
-
-### Datasets / Environments
-
-#### MuJoCo Humanoid-v4
-
-- Built into Gymnasium
-- Standard benchmark
-- 17 actuated joints
-
-```python
-import gymnasium as gym
-env = gym.make("Humanoid-v4")
-```
-
-#### DeepMimic Reference Motions
-
-- **Paper**: <https://arxiv.org/abs/1804.02717>
-- **Use**: Motion imitation training
-- Example motions: walking, running, backflip
-
-#### CMU Motion Capture
-
-- **URL**: <http://mocap.cs.cmu.edu/>
-- **Size**: 2,605 motion clips
-- **Use**: Reference for motion imitation
-
-### Training Plan
-
-```python
-from stable_baselines3 import PPO
-import gymnasium as gym
-
-# 1. Create environment
-env = gym.make("Humanoid-v4")
-
-# 2. Train with PPO
-model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=10_000_000)
-
-# 3. Save
-model.save("rl_humanoid_walk")
-```
-
-### Estimated Training Time
-
-| Task | Timesteps | Time (RTX 3080) |
-|------|-----------|-----------------|
-| Basic walk | 1M | 2 hours |
-| Robust walk | 10M | 20 hours |
-| Complex skills | 50M | 3-5 days |
+To expand the KB, add entries to `data/knowledge_base/objects/` following the existing JSON schema.
 
 ---
 
-## 3. SSM Layers - YOUR CONTRIBUTION
+## 5. Modules Not Requiring Training
 
-### What to Train
-
-Your novel **PhysicsSSM** component needs:
-
-- Motion data (HumanML3D)
-- Physics constraints (from PyBullet)
-
-### Novel Training Approach
-
-```python
-# Physics-constrained SSM training
-
-def train_physics_ssm():
-    model = PhysicsSSM(d_model=256, d_physics=64)
-    
-    for motion, physics_state in data_loader:
-        # motion: from HumanML3D
-        # physics_state: from PyBullet simulation
-        
-        # Forward with physics constraints
-        pred = model(motion, physics_state)
-        
-        # Loss 1: Motion reconstruction
-        motion_loss = mse(pred, motion)
-        
-        # Loss 2: Physics consistency (novel!)
-        # Check if output violates physics
-        physics_loss = compute_physics_violation(pred)
-        
-        # Combined loss
-        loss = motion_loss + 0.1 * physics_loss
-```
-
-### This is Novel Because
-
-1. Standard motion models: Learn from data only
-2. Physics simulation: No learning
-3. **Your PhysicsSSM**: Combines both → learned physics-aware motion
+| Module | Implementation | Notes |
+|--------|---------------|-------|
+| M1 PromptParser | Regex + vocabulary | Fallback when T5 unavailable |
+| M2 ScenePlanner | scipy L-BFGS-B solver | Deterministic constraint optimisation |
+| M3 AssetGenerator | Pretrained Shap-E / TripoSR | Downloads from HuggingFace |
+| M5 PhysicsEngine | PyBullet rigid-body sim | URDF humanoid + PD joint control |
+| M7 RenderEngine | OpenCV post-processing | Motion blur, DoF, colour grade |
+| M8 AIEnhancer | Pretrained SD 1.5 + ControlNet + AnimateDiff | Downloads from HuggingFace |
 
 ---
 
-## 4. Asset Generator (M3) - LOW PRIORITY
+## Datasets
 
-### Pretrained Models Available
-
-| Model | Link | Quality |
-|-------|------|---------|
-| Shap-E | <https://github.com/openai/shap-e> | Good |
-| TripoSR | <https://huggingface.co/stabilityai/TripoSR> | Better |
-
-### Dataset (if finetuning)
-
-- **ShapeNet**: <https://shapenet.org/>
-- **Objaverse**: <https://objaverse.allenai.org/>
-
-Finetuning is optional - pretrained models work well.
+| Path | Size | Format | Used By |
+|------|------|--------|---------|
+| `data/KIT-ML/` | 2.23 GB | `.npy` joints + `.txt` | M4 training + retrieval |
+| `data/m1_training/` | 35.5 MB | `.jsonl` (40k samples) | M1 T5 finetuning |
+| `data/M1_VisualGenome/` | 4.85 GB | Raw VG data | M1 dataset building |
+| `data/knowledge_base/` | ~1 MB | JSON + FAISS index | M1 KB retriever |
 
 ---
 
-## 5. AI Enhancer (M8) - LOW PRIORITY
+## Checkpoints
 
-### Pretrained Models
-
-- **ControlNet**: <https://github.com/lllyasviel/ControlNet>
-- **Stable Diffusion**: Use as base
-
-### Dataset (if finetuning)
-
-- **LAION-5B**: General images
-- Custom: Pairs of (physics render, enhanced image)
-
----
-
-## Recommended Training Order
-
-```
-Week 1-2: Download HumanML3D, setup training pipeline
-    └── Test with small subset first
-    
-Week 3-4: Train SSM Motion Generator
-    └── Compare with MDM baseline
-    
-Week 5-6: Train PhysicsSSM (your contribution)
-    └── Add physics loss term
-    
-Week 7-8: (Optional) Train RL Controller
-    └── For robust locomotion demo
-```
-
----
-
-## Hardware Requirements
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| GPU VRAM | 8GB | 16GB+ |
-| RAM | 16GB | 32GB |
-| Storage | 50GB | 200GB |
-| Training | RTX 3060 | RTX 4080/4090 |
-
----
-
-## Quick Start Commands
-
-```bash
-# 1. Download HumanML3D
-git clone https://github.com/EricGuo5513/HumanML3D
-cd HumanML3D && bash prepare/download_glove.sh
-
-# 2. Install dependencies
-pip install torch transformers datasets
-
-# 3. Run training (once script is created)
-python train_ssm_motion.py --epochs 100 --batch_size 32
-```
+| Path | Size | Module | Status |
+|------|------|--------|--------|
+| `m1_checkpoints/m1_scene_extractor_v5/` | 293 MB | M1 T5 | Best (loss=0.062) |
+| `checkpoints/motion_ssm/best_model.pt` | 58 MB | M4 MotionSSM | Best (loss=0.371) |
+| `checkpoints/physics_ssm/best_model.pt` | TBD | M4 PhysicsSSM | Training... |
 
 ---
 
 ## References
 
-1. **HumanML3D**: Guo et al., CVPR 2022 - <https://arxiv.org/abs/2205.01061>
-2. **MDM**: Tevet et al., ICLR 2023 - <https://arxiv.org/abs/2209.14916>
-3. **Motion Mamba**: Zhang et al., ECCV 2024 - <https://arxiv.org/abs/2403.07487>
-4. **PPO**: Schulman et al., 2017 - <https://arxiv.org/abs/1707.06347>
-5. **DeepMimic**: Peng et al., SIGGRAPH 2018 - <https://arxiv.org/abs/1804.02717>
+1. **KIT-ML**: Plappert et al., 2016 — <https://arxiv.org/abs/1609.04733>
+2. **HumanML3D**: Guo et al., CVPR 2022 — <https://arxiv.org/abs/2205.01061>
+3. **Motion Mamba**: Zhang et al., ECCV 2024 — <https://arxiv.org/abs/2403.07487>
+4. **PINNs**: Raissi et al., JCP 2019 — Physics-informed neural nets
+5. **Neural ODEs**: Chen et al., NeurIPS 2018

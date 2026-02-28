@@ -151,31 +151,6 @@ class Simulator:
         elif action_type == 'velocity':
             self.scene.set_velocity(obj_name, action.get('velocity', [0, 0, 0]))
     
-    def save_frames(self, frames: List[FrameData], output_dir: str, 
-                    save_depth: bool = True, save_segmentation: bool = False) -> Dict[str, List[str]]:
-        from PIL import Image
-        os.makedirs(output_dir, exist_ok=True)
-        paths = {'rgb': [], 'depth': [], 'segmentation': []}
-        
-        for i, frame in enumerate(frames):
-            rgb_path = os.path.join(output_dir, f'frame_{i:04d}_rgb.png')
-            Image.fromarray(frame.rgb).save(rgb_path)
-            paths['rgb'].append(rgb_path)
-            
-            if save_depth:
-                depth_path = os.path.join(output_dir, f'frame_{i:04d}_depth.png')
-                Image.fromarray(frame.depth).save(depth_path)
-                paths['depth'].append(depth_path)
-            
-            if save_segmentation:
-                seg_path = os.path.join(output_dir, f'frame_{i:04d}_seg.png')
-                seg_vis = ((frame.segmentation + 1) * 30 % 256).astype(np.uint8)
-                Image.fromarray(seg_vis).save(seg_path)
-                paths['segmentation'].append(seg_path)
-        
-        log.info("Saved %d frames", len(frames))
-        return paths
-    
     def reset(self):
         self.current_time = 0.0
     
