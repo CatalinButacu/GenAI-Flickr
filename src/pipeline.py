@@ -200,15 +200,38 @@ class Pipeline:
         if not (self.config.use_motion_generation and self._motion_gen):
             return {}
         from src.shared.vocabulary import ACTIONS
-        num_frames = int(self.config.duration * 20)  # KIT-ML is at 20 fps
-        clips = {
-            action.actor: self._motion_gen.generate(
-                ACTIONS[action.action_type].motion_clip.replace("_", " "),
-                num_frames=num_frames,
-            )
-            for action in parsed.actions
-            if (act_def := ACTIONS.get(action.action_type)) and act_def.motion_clip
-        }
+        total_frames = int(self.config.duration * 20)  # KIT-ML is at 20 fps
+
+        # ── Collect an ORDERED list of (actor, clip) pairs ───────────
+        # Each parsed action gets its own clip; multiple actions for the
+        # same actor are kept separate so they can be sequenced.
+        action_clips: List[tuple] = []
+        for action in parsed.actions:
+            act_def = ACTIONS.get(action.action_type)
+            if act_def and act_def.motion_clip:
+                # Divide total frames proportionally across the action count
+                n = max(total_frames // max(len(parsed.actions), 1), 20)
+                clip = self._motion_gen.generate(
+                    act_def.motion_clip.replace("_", " "), num_frames=n,
+                )
+                action_clips.append((action.actor, clip))
+
+        if not action_clips:
+            return {}
+
+        # ── Sequence & blend clips that share the same actor ─────────
+        actor_sequences: Dict[str, List] = {}
+        for actor, clip in action_clips:
+            actor_sequences.setdefault(actor, []).append(clip)
+
+        clips: Dict[str, Any] = {}
+        for actor, seq in actor_sequences.items():
+            if len(seq) == 1:
+                clips[actor] = seq[0]
+            else:
+                clips[actor] = self._blend_motion_clips(seq)
+                log.info("[M4] sequenced %d clips for '%s' → %d frames",
+                         len(seq), actor, clips[actor].num_frames)
 
         # ── PhysicsSSM refinement pass ───────────────────────────────
         # Blend SSM temporal modelling with physics constraints through
@@ -242,6 +265,81 @@ class Pipeline:
                              actor, len(refined.frames))
 
         return clips
+
+    @staticmethod
+    def _blend_motion_clips(
+        clips: List,
+        blend_frames: int = 10,
+    ):
+        """Concatenate motion clips with linear cross-fade over *blend_frames*.
+
+        For each pair of consecutive clips, the last *blend_frames* of clip_i
+        are linearly blended with the first *blend_frames* of clip_{i+1}.
+        This eliminates discontinuities at action boundaries.
+        """
+        import numpy as np
+        from src.modules.m4_motion_generator.models import MotionClip
+
+        # Concatenate feature arrays with crossfade
+        feature_parts: List[np.ndarray] = []
+        joint_parts: List[np.ndarray] = []
+        action_labels: List[str] = []
+
+        for i, clip in enumerate(clips):
+            action_labels.append(clip.action)
+            f = clip.frames
+            j = clip.raw_joints  # may be None
+
+            if i > 0 and blend_frames > 0:
+                # Crossfade overlap: previous tail + current head
+                n_blend = min(blend_frames, len(feature_parts[-1]), len(f))
+                if n_blend > 0:
+                    alpha = np.linspace(0.0, 1.0, n_blend).astype(np.float32)
+
+                    # Features blend
+                    tail = feature_parts[-1][-n_blend:]
+                    head = f[:n_blend]
+                    blended = tail * (1 - alpha[:, None]) + head * alpha[:, None]
+                    feature_parts[-1] = feature_parts[-1][:-n_blend]
+                    feature_parts.append(blended)
+                    feature_parts.append(f[n_blend:])
+
+                    # Raw joints blend (if both have them)
+                    if j is not None and joint_parts and joint_parts[-1] is not None:
+                        j_tail = joint_parts[-1][-n_blend:]
+                        j_head = j[:n_blend]
+                        j_blended = (
+                            j_tail * (1 - alpha[:, None, None])
+                            + j_head * alpha[:, None, None]
+                        )
+                        joint_parts[-1] = joint_parts[-1][:-n_blend]
+                        joint_parts.append(j_blended)
+                        joint_parts.append(j[n_blend:])
+                    elif j is not None:
+                        joint_parts.append(j)
+                else:
+                    feature_parts.append(f)
+                    if j is not None:
+                        joint_parts.append(j)
+            else:
+                feature_parts.append(f)
+                if j is not None:
+                    joint_parts.append(j)
+
+        combined_features = np.concatenate(feature_parts, axis=0)
+        combined_joints = (
+            np.concatenate(joint_parts, axis=0)
+            if joint_parts and all(jp is not None for jp in joint_parts)
+            else None
+        )
+
+        return MotionClip(
+            action=" then ".join(action_labels),
+            frames=combined_features,
+            fps=clips[0].fps,
+            source="sequenced",
+            raw_joints=combined_joints,
+        )
 
     def _enrich_entities_from_kb(self, parsed) -> None:
         """Enrich parsed entities with KB properties via semantic lookup.
@@ -349,12 +447,17 @@ class Pipeline:
 
     @staticmethod
     def _pick_raw_joints(motion_clips) -> "Any | None":
+        """Concatenate raw joints from all clips (respects action sequencing)."""
+        import numpy as np
+        parts = []
         for clip in (motion_clips or {}).values():
             if clip is not None and getattr(clip, "raw_joints", None) is not None:
-                log.info("[M5] using motion clip '%s' (%d raw frames)",
-                         clip.action, len(clip.raw_joints))
-                return clip.raw_joints
-        return None
+                log.info("[M5] using motion clip '%s' (%d raw frames, src=%s)",
+                         clip.action, len(clip.raw_joints), clip.source)
+                parts.append(clip.raw_joints)
+        if not parts:
+            return None
+        return np.concatenate(parts, axis=0) if len(parts) > 1 else parts[0]
 
     def _run_motion_driven(
         self,
