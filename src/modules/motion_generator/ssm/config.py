@@ -1,7 +1,7 @@
 """
 #WHERE
     Used by s4.py, mamba.py, motion_ssm.py, physics_ssm.py, temporal.py,
-    factory.py, and src/modules/m4_motion_generator/train.py
+    factory.py, and src/modules/motion_generator/train.py
 
 #WHAT
     SSM (State Space Model) configuration dataclass.

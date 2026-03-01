@@ -10,8 +10,8 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.m1_scene_understanding.prompt_parser import PromptParser
-from src.modules.m2_scene_planner import ScenePlanner, PlannedScene, PlannedEntity, Position3D
+from src.modules.scene_understanding.prompt_parser import PromptParser
+from src.modules.scene_planner import ScenePlanner, PlannedScene, PlannedEntity, Position3D
 
 _A_BALL = "A ball"
 

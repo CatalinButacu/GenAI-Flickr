@@ -1,6 +1,6 @@
 ﻿"""
 #WHERE
-    Imported by m8_ai_enhancer/__init__.py, pipeline.py.
+    Imported by ai_enhancer/__init__.py, pipeline.py.
 
 #WHAT
     VideoRenderer — legacy depth-conditioned ControlNet enhancement.

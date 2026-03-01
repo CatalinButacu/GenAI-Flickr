@@ -33,20 +33,20 @@ class M5Benchmark:
         print("-" * 50)
 
         try:
-            from src.modules.m5_physics_engine import Scene, Simulator, CameraConfig, CinematicCamera  # noqa: F401
+            from src.modules.physics_engine import Scene, Simulator, CameraConfig, CinematicCamera  # noqa: F401
             self.test("1. Core imports", True)
         except ImportError as e:
             self.test("1. Core imports", False, str(e)[:30])
             return False
 
         try:
-            from src.modules.m5_physics_engine.scene import ShapeFactory, PhysicsObject  # noqa: F401
+            from src.modules.physics_engine.scene import ShapeFactory, PhysicsObject  # noqa: F401
             self.test("2. Scene classes", True)
         except ImportError as e:
             self.test("2. Scene classes", False, str(e)[:30])
 
         try:
-            from src.modules.m5_physics_engine.camera import FrameData, EasingFunctions  # noqa: F401
+            from src.modules.physics_engine.camera import FrameData, EasingFunctions  # noqa: F401
             self.test("3. Simulator classes", True)
         except ImportError as e:
             self.test("3. Simulator classes", False, str(e)[:30])
@@ -70,7 +70,7 @@ class M5Benchmark:
         print("\n[6-10] SCENE SETUP")
         print("-" * 50)
 
-        from src.modules.m5_physics_engine import Scene
+        from src.modules.physics_engine import Scene
 
         try:
             self.scene = Scene(gravity=-9.81)
@@ -138,7 +138,7 @@ class M5Benchmark:
         print("\n[17-22] PHYSICS SIMULATION")
         print("-" * 50)
 
-        from src.modules.m5_physics_engine import Simulator, CameraConfig
+        from src.modules.physics_engine import Simulator, CameraConfig
 
         try:
             camera = CameraConfig(width=320, height=240)
@@ -183,7 +183,7 @@ class M5Benchmark:
         print("\n[23-26] CINEMATIC CAMERA")
         print("-" * 50)
 
-        from src.modules.m5_physics_engine import CinematicCamera
+        from src.modules.physics_engine import CinematicCamera
 
         try:
             cine = CinematicCamera(distance=2.0, yaw=0, pitch=-20)
@@ -235,7 +235,7 @@ class M5Benchmark:
         print("\n[29-30] PHYSICS ACCURACY")
         print("-" * 50)
 
-        from src.modules.m5_physics_engine import Scene, Simulator, CameraConfig
+        from src.modules.physics_engine import Scene, Simulator, CameraConfig
 
         try:
             drop_scene = Scene(gravity=-9.81)

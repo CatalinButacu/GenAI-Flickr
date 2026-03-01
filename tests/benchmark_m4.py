@@ -40,15 +40,15 @@ class M4Benchmark:
         print("-" * 50)
 
         try:
-            from src.modules.m4_motion_generator import MotionGenerator, MotionClip  # noqa: F401
+            from src.modules.motion_generator import MotionGenerator, MotionClip  # noqa: F401
             self.test("1. MotionGenerator import", True)
         except ImportError as e:
             self.test("1. MotionGenerator import", False, str(e)[:30])
             return False
 
         try:
-            from src.modules.m4_motion_generator.keyword_retriever import MotionRetriever  # noqa: F401
-            from src.modules.m4_motion_generator.ssm_model import SSMMotionModel  # noqa: F401
+            from src.modules.motion_generator.keyword_retriever import MotionRetriever  # noqa: F401
+            from src.modules.motion_generator.ssm_model import SSMMotionModel  # noqa: F401
             self.test("2. Backend classes import", True)
         except ImportError as e:
             self.test("2. Backend classes import", False, str(e)[:30])
@@ -60,13 +60,13 @@ class M4Benchmark:
             self.test("3. KITMLLoader import", False, str(e)[:30])
 
         try:
-            from src.modules.m4_motion_generator.ssm import MotionSSM, MambaLayer  # noqa: F401
+            from src.modules.motion_generator.ssm import MotionSSM, MambaLayer  # noqa: F401
             self.test("4. SSM modules import", True)
         except ImportError as e:
             self.test("4. SSM modules import", False, str(e)[:30])
 
         try:
-            from src.modules.m4_motion_generator.nn_models import TextToMotionSSM  # noqa: F401
+            from src.modules.motion_generator.nn_models import TextToMotionSSM  # noqa: F401
             self.test("5. Training module import", True)
         except ImportError as e:
             self.test("5. Training module import", False, str(e)[:30])
@@ -107,7 +107,7 @@ class M4Benchmark:
         print("-" * 50)
 
         try:
-            from src.modules.m4_motion_generator import MotionGenerator
+            from src.modules.motion_generator import MotionGenerator
             self.generator = MotionGenerator(use_retrieval=True, use_ssm=True)
             self.test("11. Generator initialized", True)
         except Exception as e:

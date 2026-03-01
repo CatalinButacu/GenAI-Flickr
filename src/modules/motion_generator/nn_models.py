@@ -1,6 +1,6 @@
 """
 #WHERE
-    Used by trainer.py and src/modules/m4_motion_generator/generator.py
+    Used by trainer.py and src/modules/motion_generator/generator.py
     (SSMMotionModel loads TextToMotionSSM from a checkpoint).
 
 #WHAT
@@ -22,7 +22,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
-from src.modules.m4_motion_generator.ssm import MambaLayer, SSMConfig
+from src.modules.motion_generator.ssm import MambaLayer, SSMConfig
 
 
 class SimpleTextEncoder(nn.Module):

@@ -310,7 +310,7 @@ def main() -> None:
         joints, text = load_clip(args.kit_dir, sid)
         clips = [(sid, text, joints)]
 
-    from src.modules.m7_render_engine import RenderEngine, RenderSettings
+    from src.modules.render_engine import RenderEngine, RenderSettings
 
     for sample_id, text, joints_all in clips:
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

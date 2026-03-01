@@ -1,6 +1,6 @@
 """
 #WHERE
-    Imported by src/modules/m4_motion_generator (train, ssm_generator),
+    Imported by src/modules/motion_generator (train, ssm_generator),
     src/pipeline.py, tests/test_modules.py, benchmarks.
 
 #WHAT
@@ -12,7 +12,7 @@
 
 #OUTPUT
     All SSM classes, factories, and utilities available via
-    `from src.modules.m4_motion_generator.ssm import ...`
+    `from src.modules.motion_generator.ssm import ...`
 """
 
 import torch

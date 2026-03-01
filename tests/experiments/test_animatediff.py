@@ -38,7 +38,7 @@ def main() -> None:
 
     # ── Load walking clip ───────────────────────────────────────────────
     log.info("Loading KIT-ML motion…")
-    from src.modules.m4_motion_generator import MotionGenerator
+    from src.modules.motion_generator import MotionGenerator
 
     mg = MotionGenerator(use_retrieval=True, use_ssm=False)
     clip = mg.generate("walk forward", num_frames=60)
@@ -55,7 +55,7 @@ def main() -> None:
     selected = [raw[i] for i in indices]
 
     # ── Project to OpenPose (384×384 to reduce VRAM) ────────────────────
-    from src.modules.m8_ai_enhancer import SkeletonProjector
+    from src.modules.ai_enhancer import SkeletonProjector
 
     projector = SkeletonProjector(img_w=384, img_h=384, cam_yaw_deg=15.0)
     skeleton_imgs = [projector.render(xyz) for xyz in selected]
@@ -67,7 +67,7 @@ def main() -> None:
 
     # ── Load AnimateDiff + ControlNet ───────────────────────────────────
     log.info("Loading AnimateDiff pipeline (downloads ~1.8 GB on first run)…")
-    from src.modules.m8_ai_enhancer import AnimateDiffHumanRenderer
+    from src.modules.ai_enhancer import AnimateDiffHumanRenderer
 
     renderer = AnimateDiffHumanRenderer(
         device="cuda",
@@ -84,7 +84,7 @@ def main() -> None:
         log.error("AnimateDiff setup failed — check error above")
         log.info("Falling back to per-frame ControlNet for comparison…")
 
-        from src.modules.m8_ai_enhancer import ControlNetHumanRenderer
+        from src.modules.ai_enhancer import ControlNetHumanRenderer
         cn = ControlNetHumanRenderer(device="cuda", num_steps=15)
         cn.setup()
 

@@ -17,7 +17,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.m4_motion_generator.physics_trainer import (
+from src.modules.motion_generator.physics_trainer import (
     PhysicsTrainingConfig,
     train_physics_ssm,
 )

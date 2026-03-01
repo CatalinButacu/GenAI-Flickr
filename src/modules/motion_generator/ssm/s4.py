@@ -1,7 +1,7 @@
 """
 #WHERE
     Used by mamba.py, temporal.py, and factory.py.
-    Indirect user: src/modules/m4_motion_generator (via factory).
+    Indirect user: src/modules/motion_generator (via factory).
 
 #WHAT
     S4 (Structured State Space Sequence) layer implementation.

@@ -23,7 +23,7 @@ from typing import Any, Dict, List
 
 from src.shared.constants import GRAVITY
 from src.shared.mem_profile import profile_memory, tracemalloc_snapshot
-from src.modules.m7_render_engine import RenderEngine, RenderSettings
+from src.modules.render_engine import RenderEngine, RenderSettings
 
 log = logging.getLogger(__name__)
 
@@ -54,13 +54,13 @@ class Pipeline:
         self._kb_retriever = None
 
     def setup(self) -> None:
-        from src.modules.m1_scene_understanding.prompt_parser import PromptParser
-        from src.modules.m2_scene_planner import ScenePlanner
+        from src.modules.scene_understanding.prompt_parser import PromptParser
+        from src.modules.scene_planner import ScenePlanner
 
         # Prefer T5SceneParser (ML) over PromptParser (rules) when configured
         if self.config.use_t5_parser:
             try:
-                from src.modules.m1_scene_understanding.t5_parser import T5SceneParser
+                from src.modules.scene_understanding.t5_parser import T5SceneParser
                 self._parser = T5SceneParser(device=self.config.device, fallback=True)
                 log.info("[M1] T5SceneParser ready (ML-powered, with rules fallback)")
             except Exception as exc:
@@ -76,7 +76,7 @@ class Pipeline:
 
         # Knowledge retriever — SBERT + FAISS semantic lookup over VG objects
         try:
-            from src.modules.m1_scene_understanding.retriever import KnowledgeRetriever
+            from src.modules.scene_understanding.retriever import KnowledgeRetriever
             self._kb_retriever = KnowledgeRetriever()
             if self._kb_retriever.setup():
                 log.info("[M1] KnowledgeRetriever ready — %d entries",
@@ -106,19 +106,19 @@ class Pipeline:
         self._is_setup = True
 
     def _init_asset_gen(self) -> None:
-        from src.modules.m3_asset_generator import ModelGenerator
+        from src.modules.asset_generator import ModelGenerator
         self._asset_gen = ModelGenerator(device=self.config.device)
         if not self._asset_gen.setup():
             raise RuntimeError("setup() returned False")
 
     def _init_motion_gen(self) -> None:
-        from src.modules.m4_motion_generator import MotionGenerator
+        from src.modules.motion_generator import MotionGenerator
         self._motion_gen = MotionGenerator(use_retrieval=True, use_ssm=True, use_semantic=True)
         # PhysicsSSM refinement pass — blends SSM temporal modelling with
         # physics constraints through a learned sigmoid gate (novel contribution)
         if self.config.use_physics_ssm:
             try:
-                from src.modules.m4_motion_generator.ssm_generator import (
+                from src.modules.motion_generator.ssm_generator import (
                     SSMMotionGenerator, SSMMotionConfig,
                 )
                 cfg = SSMMotionConfig(use_physics=True)
@@ -137,7 +137,7 @@ class Pipeline:
     def _init_enhancer(self) -> None:
         # Prefer AnimateDiff (temporal consistency) over per-frame ControlNet.
         # Use 384×384 and batch_size=4 to fit within 4 GB VRAM.
-        from src.modules.m8_ai_enhancer import AnimateDiffHumanRenderer
+        from src.modules.ai_enhancer import AnimateDiffHumanRenderer
         try:
             self._enhancer = AnimateDiffHumanRenderer(
                 device=self.config.device,
@@ -152,7 +152,7 @@ class Pipeline:
         except Exception as exc:
             log.warning("[M8] AnimateDiff unavailable (%s) — falling back", exc)
 
-        from src.modules.m8_ai_enhancer import ControlNetHumanRenderer
+        from src.modules.ai_enhancer import ControlNetHumanRenderer
         self._enhancer = ControlNetHumanRenderer(device=self.config.device)
         if not self._enhancer.setup():
             raise RuntimeError("ControlNet setup failed")
@@ -278,7 +278,7 @@ class Pipeline:
         This eliminates discontinuities at action boundaries.
         """
         import numpy as np
-        from src.modules.m4_motion_generator.models import MotionClip
+        from src.modules.motion_generator.models import MotionClip
 
         # Concatenate feature arrays with crossfade
         feature_parts: List[np.ndarray] = []
@@ -368,7 +368,7 @@ class Pipeline:
     @profile_memory
     def _run_physics(self, planned, motion_clips: Dict[str, Any] = None,
                      parsed=None):
-        from src.modules.m5_physics_engine import (
+        from src.modules.physics_engine import (
             Scene, Simulator, CameraConfig, CinematicCamera,
             load_humanoid, retarget_sequence,
         )
@@ -486,7 +486,7 @@ class Pipeline:
           Physics-verified skeleton → cinematic glow render (OpenCV).
         """
         import pybullet as p
-        from src.modules.m5_physics_engine import (
+        from src.modules.physics_engine import (
             PhysicsSkeletonRenderer, physics_links_to_skeleton,
         )
 
@@ -578,7 +578,7 @@ class Pipeline:
                 skeleton_positions, cam, action_label=action_label,
             )
 
-        from src.modules.m5_physics_engine import FrameData
+        from src.modules.physics_engine import FrameData
         import numpy as np
         frame_h, frame_w = raw_frames[0].shape[:2]
         dummy_depth = np.zeros((frame_h, frame_w), dtype=np.uint8)
@@ -608,8 +608,8 @@ class Pipeline:
           RGB between keyframes.  4× speed boost for ~5% quality cost.
         """
         import numpy as np
-        from src.modules.m8_ai_enhancer import SkeletonProjector
-        from src.modules.m8_ai_enhancer.animatediff_human import (
+        from src.modules.ai_enhancer import SkeletonProjector
+        from src.modules.ai_enhancer.animatediff_human import (
             AnimateDiffHumanRenderer,
         )
 
@@ -690,7 +690,7 @@ class Pipeline:
         action_label: str = "",
     ) -> List:
         """Fallback: render physics-verified skeletons as glow skeleton."""
-        from src.modules.m5_physics_engine import (
+        from src.modules.physics_engine import (
             PhysicsSkeletonRenderer, auto_orient_skeleton,
         )
         import numpy as np

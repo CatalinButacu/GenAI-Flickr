@@ -432,7 +432,7 @@ def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Fine-tune flan-t5-small for M1 scene extraction")
     p.add_argument("--model",       default="google/flan-t5-small",        help="Base model name on HuggingFace Hub")
     p.add_argument("--data-dir",    default="data/m1_training",            help="Directory containing train.jsonl / val.jsonl")
-    p.add_argument("--output",      default="m1_checkpoints/m1_scene_extractor", help="Output directory for model checkpoint")
+    p.add_argument("--output",      default="checkpoints/scene_understanding/scene_extractor", help="Output directory for model checkpoint")
     p.add_argument("--epochs",      type=int, default=15)
     p.add_argument("--batch-size",  type=int, default=4)
     p.add_argument("--lr",          type=float, default=5e-5)
@@ -443,7 +443,7 @@ def _parse_args() -> argparse.Namespace:
                         "Run build_vg_dataset.py with the slim schema to keep this "
                         "well under 256. Training aborts if >20%% of labels are truncated.")
     p.add_argument("--resume-from",   default=None,
-                   help="Path to a HuggingFace checkpoint dir to resume from (e.g. m1_checkpoints/m1_scene_extractor/checkpoint-15)")
+                   help="Path to a HuggingFace checkpoint dir to resume from (e.g. checkpoints/scene_understanding/scene_extractor/checkpoint-15)")
     p.add_argument("--wandb-project",  default=None,
                    help="wandb project name. Enables experiment tracking. E.g. --wandb-project m1-scene-extractor")
     p.add_argument("--wandb-run",      default=None,

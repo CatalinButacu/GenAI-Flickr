@@ -1,7 +1,7 @@
 """
 #WHERE
     Used by motion_ssm.py, physics_ssm.py, temporal.py, factory.py,
-    and src/modules/m4_motion_generator/train.py (TextToMotionSSM).
+    and src/modules/motion_generator/train.py (TextToMotionSSM).
 
 #WHAT
     Mamba (Selective State Space) layer implementation.

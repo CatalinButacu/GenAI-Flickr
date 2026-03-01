@@ -24,14 +24,14 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Optional
 
-from src.modules.m4_motion_generator.generator import MotionGenerator
-from src.modules.m4_motion_generator.models import MotionClip
-from src.modules.m4_motion_generator.constants import MOTION_DIM
+from src.modules.motion_generator.generator import MotionGenerator
+from src.modules.motion_generator.models import MotionClip
+from src.modules.motion_generator.constants import MOTION_DIM
 from src.shared.vocabulary import ACTIONS
 
 log = logging.getLogger(__name__)
 
-from src.modules.m4_motion_generator.ssm import MotionSSM, PhysicsSSM, SimpleSSMNumpy, HAS_TORCH
+from src.modules.motion_generator.ssm import MotionSSM, PhysicsSSM, SimpleSSMNumpy, HAS_TORCH
 
 from src.shared.constants import DEFAULT_PHYSICS_SSM_CHECKPOINT
 
@@ -104,7 +104,7 @@ class SSMMotionGenerator(MotionGenerator):
     def _load_checkpoint(self, path: str) -> None:
         """Load trained MotionSSM + PhysicsSSM + MotionProjector weights."""
         import torch
-        from src.modules.m4_motion_generator.physics_trainer import MotionProjector
+        from src.modules.motion_generator.physics_trainer import MotionProjector
 
         device = torch.device(self._device_str if torch.cuda.is_available() else "cpu")
         ck = torch.load(path, map_location=device, weights_only=False)

@@ -69,7 +69,7 @@ class TestPromptParser(unittest.TestCase):
     """Tests for Module 1: Prompt Parser."""
     
     def setUp(self):
-        from src.modules.m1_scene_understanding.prompt_parser import PromptParser
+        from src.modules.scene_understanding.prompt_parser import PromptParser
         self.parser = PromptParser()
         
     def test_simple_parse(self):
@@ -105,8 +105,8 @@ class TestScenePlanner(unittest.TestCase):
     """Tests for Module 2: Scene Planner."""
     
     def setUp(self):
-        from src.modules.m1_scene_understanding.prompt_parser import PromptParser
-        from src.modules.m2_scene_planner import ScenePlanner
+        from src.modules.scene_understanding.prompt_parser import PromptParser
+        from src.modules.scene_planner import ScenePlanner
         
         self.parser = PromptParser()
         self.planner = ScenePlanner()
@@ -139,7 +139,7 @@ class TestMotionGenerator(unittest.TestCase):
     
     def test_placeholder_generation(self):
         """Motion generator creates clip from text."""
-        from src.modules.m4_motion_generator import MotionGenerator
+        from src.modules.motion_generator import MotionGenerator
         
         gen = MotionGenerator(use_retrieval=True, use_ssm=False)
         clip = gen.generate("walk forward", num_frames=60)
@@ -149,7 +149,7 @@ class TestMotionGenerator(unittest.TestCase):
         
     def test_motion_frame_structure(self):
         """Motion clip has correct structure."""
-        from src.modules.m4_motion_generator import MotionGenerator
+        from src.modules.motion_generator import MotionGenerator
         
         gen = MotionGenerator(use_retrieval=True, use_ssm=False)
         clip = gen.generate("walk", num_frames=30)
@@ -163,7 +163,7 @@ class TestSSMMotionGenerator(unittest.TestCase):
     
     def test_ssm_generation(self):
         """SSM motion model can be instantiated."""
-        from src.modules.m4_motion_generator import SSMMotionModel
+        from src.modules.motion_generator import SSMMotionModel
         
         model = SSMMotionModel()
         clip = model.generate("walk", num_frames=30)
@@ -173,7 +173,7 @@ class TestSSMMotionGenerator(unittest.TestCase):
         
     def test_ssm_fallback(self):
         """SSM model handles missing checkpoint gracefully."""
-        from src.modules.m4_motion_generator import SSMMotionModel
+        from src.modules.motion_generator import SSMMotionModel
         
         model = SSMMotionModel(checkpoint_path="nonexistent/path.pt")
         clip = model.generate("walk", num_frames=30)
@@ -186,7 +186,7 @@ class TestSSMCore(unittest.TestCase):
     
     def test_ssm_info(self):
         """SSM info returns expected structure."""
-        from src.modules.m4_motion_generator.ssm import get_ssm_info
+        from src.modules.motion_generator.ssm import get_ssm_info
         
         info = get_ssm_info()
         
@@ -197,7 +197,7 @@ class TestSSMCore(unittest.TestCase):
         
     def test_numpy_ssm(self):
         """NumPy SSM fallback works."""
-        from src.modules.m4_motion_generator.ssm import SimpleSSMNumpy
+        from src.modules.motion_generator.ssm import SimpleSSMNumpy
         
         ssm = SimpleSSMNumpy(d_state=8, d_input=16, d_output=16)
         
@@ -220,7 +220,7 @@ class TestPhysicsEngine(unittest.TestCase):
     
     def test_scene_creation(self):
         """Physics scene can be created and cleaned up."""
-        from src.modules.m5_physics_engine import Scene
+        from src.modules.physics_engine import Scene
         
         scene = Scene(gravity=-9.81)
         scene.setup()
@@ -231,7 +231,7 @@ class TestPhysicsEngine(unittest.TestCase):
         
     def test_add_primitives(self):
         """Can add primitive shapes to scene."""
-        from src.modules.m5_physics_engine import Scene
+        from src.modules.physics_engine import Scene
         
         scene = Scene()
         scene.setup()
@@ -249,7 +249,7 @@ class TestHumanoidBody(unittest.TestCase):
     
     def test_import(self):
         """HumanoidBody can be imported."""
-        from src.modules.m5_physics_engine.humanoid import HumanoidBody, HumanoidConfig
+        from src.modules.physics_engine.humanoid import HumanoidBody, HumanoidConfig
         
         config = HumanoidConfig(height=1.7, mass=70.0)
         body = HumanoidBody(config)
@@ -258,7 +258,7 @@ class TestHumanoidBody(unittest.TestCase):
         
     def test_joint_indices(self):
         """Joint indices are defined."""
-        from src.modules.m5_physics_engine.humanoid import HumanoidBody
+        from src.modules.physics_engine.humanoid import HumanoidBody
         
         self.assertIn("left_knee", HumanoidBody.JOINT_INDICES)
         self.assertIn("right_knee", HumanoidBody.JOINT_INDICES)

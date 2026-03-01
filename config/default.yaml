@@ -1,20 +1,91 @@
-# Default configuration for physics simulation
+# ============================================================
+# GenAI-Flickr — master configuration
+# Single source of truth for paths, hyper-parameters,
+# and runtime settings.  Override per-run via CLI flags.
+# ============================================================
+
+# ── Physics simulation ──────────────────────────────────────
 physics:
   gravity: -9.81
-  timestep: 0.00416667  # 1/240 seconds
-  
+  timestep: 0.00416667         # 1/240 s  (240 Hz)
+  sim_hz: 240
+
+# ── Camera / rendering ──────────────────────────────────────
 camera:
   width: 640
   height: 480
   fov: 60
   near: 0.1
-  far: 100
+  far: 100.0
 
 rendering:
   fps: 24
-  
+  duration: 6.0                # seconds
+
+# ── Output directories ───────────────────────────────────────
 output:
-  base_dir: "outputs"
+  base_dir:        "outputs"
   simulations_dir: "outputs/simulations"
-  models_dir: "outputs/models"
-  videos_dir: "outputs/videos"
+  models_dir:      "outputs/3d_models"
+  videos_dir:      "outputs/videos"
+
+# ── Data paths ───────────────────────────────────────────────
+data:
+  kit_ml_dir:      "data/KIT-ML"
+  knowledge_base:  "data/knowledge_base"
+  training_dir:    "data/training"
+
+# ── Checkpoints ──────────────────────────────────────────────
+checkpoints:
+  # scene_understanding (T5 scene parser)
+  scene_understanding: "checkpoints/scene_understanding/scene_extractor_v5"
+
+  # motion_generator (MotionSSM)
+  motion_ssm:          "checkpoints/motion_ssm/best_model.pt"
+
+  # motion_generator (PhysicsSSM + MotionProjector)
+  physics_ssm:         "checkpoints/physics_ssm/best_model.pt"
+
+# ── scene_understanding ──────────────────────────────────────
+scene_understanding:
+  model_name:    "google/flan-t5-base"
+  max_length:    512
+  batch_size:    8
+  learning_rate: 3e-4
+  num_epochs:    50
+
+# ── motion_generator SSM ─────────────────────────────────────
+motion_generator:
+  d_model:        256
+  d_state:        32
+  n_layers:       4
+  motion_dim:     251          # KIT-ML / HumanML3D feature size
+  motion_fps:     20           # KIT-ML capture frame rate
+  max_seq_len:    200
+  batch_size:     16
+  learning_rate:  5e-5
+  num_epochs:     100
+  grad_clip:      0.5
+  lambda_physics: 0.1
+  warmup_steps:   500
+  patience:       15
+
+# ── physics_engine ───────────────────────────────────────────
+physics_engine:
+  humanoid_urdf:  "assets/humanoid/humanoid.urdf"
+  ground_plane:   true
+  self_collision: true
+  max_sim_steps:  10000
+
+# ── render_engine ────────────────────────────────────────────
+render_engine:
+  backend:  "pybullet"
+  width:    640
+  height:   480
+
+# ── ai_enhancer ──────────────────────────────────────────────
+ai_enhancer:
+  controlnet_model:    "lllyasviel/control_v11p_sd15_openpose"
+  animatediff_model:   "guoyww/animatediff-motion-adapter-v1-5-2"
+  num_inference_steps: 20
+  guidance_scale:      7.5

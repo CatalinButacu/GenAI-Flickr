@@ -7,8 +7,8 @@ import logging
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.m3_asset_generator import ModelGenerator
-from src.modules.m5_physics_engine import Scene, Simulator, CameraConfig
+from src.modules.asset_generator import ModelGenerator
+from src.modules.physics_engine import Scene, Simulator, CameraConfig
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

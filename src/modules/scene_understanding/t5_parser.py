@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .prompt_parser import ParsedAction, ParsedEntity, ParsedScene, PromptParser
 from src.shared.vocabulary import OBJECTS, get_object_by_keyword
+from src.shared.constants import DEFAULT_SCENE_UNDERSTANDING_CHECKPOINT
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ _COLORS: Dict[str, Tuple[float, float, float, float]] = {
 _ACTOR_TYPES = {"person", "animal", "character", "human", "man", "woman",
                 "child", "boy", "girl", "dog", "cat", "bird", "robot"}
 
-_DEFAULT_MODEL = Path("m1_checkpoints/m1_scene_extractor_v5")
+_DEFAULT_MODEL = Path(DEFAULT_SCENE_UNDERSTANDING_CHECKPOINT)
 
 
 class T5SceneParser:

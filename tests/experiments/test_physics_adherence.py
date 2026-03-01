@@ -44,8 +44,8 @@ def _load_inputs(out_dir: str) -> tuple[np.ndarray, np.ndarray, int, int] | None
         log.info("Loaded saved physics UV from %s  (shape %s)", uv_path, physics_uv.shape)
     else:
         log.warning("No saved physics_uv.npy — regenerating (may not match conditioning!)")
-        from src.modules.m4_motion_generator import MotionGenerator
-        from src.modules.m8_ai_enhancer import SkeletonProjector
+        from src.modules.motion_generator import MotionGenerator
+        from src.modules.ai_enhancer import SkeletonProjector
 
         mg = MotionGenerator(use_retrieval=True, use_ssm=False)
         clip = mg.generate("walk forward", num_frames=60)
@@ -107,7 +107,7 @@ def _draw_overlay(photo_rgb: np.ndarray, physics_uv: np.ndarray,
     vis = photo_bgr.copy()
 
     # Physics skeleton in GREEN
-    from src.modules.m8_ai_enhancer.controlnet_human import BONES
+    from src.modules.ai_enhancer.controlnet_human import BONES
     for j_a, j_b in BONES:
         pt_a = (int(physics_uv[j_a, 0]), int(physics_uv[j_a, 1]))
         pt_b = (int(physics_uv[j_b, 0]), int(physics_uv[j_b, 1]))
@@ -181,7 +181,7 @@ def main() -> None:
         return
     photo_rgb, physics_uv, w, h = inputs
 
-    from src.modules.m5_physics_engine.physics_verifier import PhysicsAdherenceVerifier
+    from src.modules.physics_engine.physics_verifier import PhysicsAdherenceVerifier
 
     verifier = PhysicsAdherenceVerifier(threshold_px=30.0, img_size=(w, h))
     if not verifier.setup():

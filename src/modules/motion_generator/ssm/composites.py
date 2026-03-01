@@ -1,7 +1,7 @@
 """
 #WHERE
-    Used by factory.py, src/modules/m4_motion_generator (train, ssm_generator),
-    src/modules/m8_ai_enhancer (frame consistency), and src/ssm/__init__.py.
+    Used by factory.py, src/modules/motion_generator (train, ssm_generator),
+    src/modules/ai_enhancer (frame consistency), and src/ssm/__init__.py.
 
 #WHAT
     Domain-specific SSM composites built on top of MambaLayer / S4Layer.

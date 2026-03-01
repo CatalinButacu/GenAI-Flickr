@@ -43,11 +43,11 @@ def main() -> None:
     from diffusers.schedulers.scheduling_unipc_multistep import (
         UniPCMultistepScheduler,
     )
-    from src.modules.m4_motion_generator import MotionGenerator
-    from src.modules.m5_physics_engine.physics_verifier import (
+    from src.modules.motion_generator import MotionGenerator
+    from src.modules.physics_engine.physics_verifier import (
         PhysicsAdherenceVerifier,
     )
-    from src.modules.m8_ai_enhancer import SkeletonProjector
+    from src.modules.ai_enhancer import SkeletonProjector
 
     out_dir = "outputs/scale_ablation"
     os.makedirs(out_dir, exist_ok=True)

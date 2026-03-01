@@ -10,12 +10,12 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.modules.m1_scene_understanding.extractor import Extractor
-from src.modules.m1_scene_understanding.retriever import KnowledgeRetriever
-from src.modules.m1_scene_understanding.reasoner import Reasoner
-from src.modules.m1_scene_understanding.builder import SceneBuilder
-from src.modules.m1_scene_understanding.orchestrator import StoryAgent
-from src.modules.m1_scene_understanding.models import (
+from src.modules.scene_understanding.extractor import Extractor
+from src.modules.scene_understanding.retriever import KnowledgeRetriever
+from src.modules.scene_understanding.reasoner import Reasoner
+from src.modules.scene_understanding.builder import SceneBuilder
+from src.modules.scene_understanding.orchestrator import StoryAgent
+from src.modules.scene_understanding.models import (
     ExtractionResult, ExtractedEntity, ExtractedAction, ExtractedRelation,
     EntityType, SceneDescription,
 )

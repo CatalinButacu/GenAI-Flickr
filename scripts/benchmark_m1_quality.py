@@ -14,7 +14,7 @@ Metrics computed:
 
 Usage:
     python scripts/benchmark_m1_quality.py
-    python scripts/benchmark_m1_quality.py --checkpoint m1_checkpoints/m1_scene_extractor_v5
+    python scripts/benchmark_m1_quality.py --checkpoint checkpoints/scene_understanding/scene_extractor_v5
     python scripts/benchmark_m1_quality.py --n 500   # evaluate 500 samples (default: 200)
 """
 
@@ -266,7 +266,7 @@ def _save_results(metrics: dict[str, Any], elapsed: float, n: int,
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--checkpoint", default="m1_checkpoints/m1_scene_extractor_v5")
+    ap.add_argument("--checkpoint", default="checkpoints/scene_understanding/scene_extractor_v5")
     ap.add_argument("--test-file", default="data/m1_training/test.jsonl")
     ap.add_argument("--n", type=int, default=200,
                     help="Number of test samples to evaluate (default 200)")

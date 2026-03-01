@@ -78,16 +78,16 @@ src/
 ├── shared/
 │   └── vocabulary.py          # Canonical objects, actions, properties
 └── modules/
-    ├── m1_scene_understanding/ # M1: Text → ParsedScene
+    ├── scene_understanding/ # M1: Text → ParsedScene
     │   ├── prompt_parser.py   #   Rules-based parser (fast, no GPU)
     │   └── orchestrator.py    #   T5 ML parser (StoryAgent)
-    ├── m2_scene_planner/       # M2: ParsedScene → PlannedScene
-    ├── m3_asset_generator/     # M3: entity → 3-D mesh (optional)
-    ├── m4_motion_generator/    # M4: action text → motion clip (optional)
-    ├── m5_physics_engine/      # M5: PlannedScene → frames + video
+    ├── scene_planner/       # M2: ParsedScene → PlannedScene
+    ├── asset_generator/     # M3: entity → 3-D mesh (optional)
+    ├── motion_generator/    # M4: action text → motion clip (optional)
+    ├── physics_engine/      # M5: PlannedScene → frames + video
     ├── m6_rl_controller/       # M6: PPO control (stub)
-    ├── m7_render_engine/       # M7: post-processing (stub)
-    └── m8_ai_enhancer/         # M8: ControlNet enhance (optional)
+    ├── render_engine/       # M7: post-processing (stub)
+    └── ai_enhancer/         # M8: ControlNet enhance (optional)
 config/
 └── default.yaml               # Physics / camera / output defaults
 scripts/                       # Training utilities (M1 T5, M4 SSM)

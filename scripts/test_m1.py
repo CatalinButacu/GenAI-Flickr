@@ -28,13 +28,13 @@ from typing import Optional
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT_ROOT))
 
-from src.modules.m1_scene_understanding.orchestrator import StoryAgent
-from src.modules.m1_scene_understanding.retriever import KnowledgeRetriever
-from src.modules.m1_scene_understanding.processor import NLPProcessor
-from src.modules.m1_scene_understanding.extractor import RuleExtractor
-from src.modules.m1_scene_understanding.ml_extractor import MLExtractor
-from src.modules.m1_scene_understanding.reasoner import Reasoner
-from src.modules.m1_scene_understanding.models import ExtractionResult, EntityType
+from src.modules.scene_understanding.orchestrator import StoryAgent
+from src.modules.scene_understanding.retriever import KnowledgeRetriever
+from src.modules.scene_understanding.processor import NLPProcessor
+from src.modules.scene_understanding.extractor import RuleExtractor
+from src.modules.scene_understanding.ml_extractor import MLExtractor
+from src.modules.scene_understanding.reasoner import Reasoner
+from src.modules.scene_understanding.models import ExtractionResult, EntityType
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ class M1Runner:
         self._retriever = KnowledgeRetriever()
         self._reasoner  = Reasoner(retriever=self._retriever)
         self._builder   = __import__(
-            'src.modules.m1_scene_understanding.builder', fromlist=['SceneBuilder']
+            'src.modules.scene_understanding.builder', fromlist=['SceneBuilder']
         ).SceneBuilder()
         self._setup = False
 

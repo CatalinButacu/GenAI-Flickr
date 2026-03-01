@@ -40,7 +40,7 @@ def main() -> None:
 
     # ── Step 1: Load a walking clip from KIT-ML ─────────────────────────
     log.info("Loading KIT-ML motion data…")
-    from src.modules.m4_motion_generator import MotionGenerator
+    from src.modules.motion_generator import MotionGenerator
 
     mg = MotionGenerator(use_retrieval=True, use_ssm=False)
     clip = mg.generate("walk forward", num_frames=60)
@@ -53,7 +53,7 @@ def main() -> None:
     log.info("Loaded clip: %s, shape=%s", clip.action, raw.shape)
 
     # ── Step 2: Pick 3 frames and project to OpenPose ───────────────────
-    from src.modules.m8_ai_enhancer import SkeletonProjector
+    from src.modules.ai_enhancer import SkeletonProjector
 
     projector = SkeletonProjector(img_w=512, img_h=512, cam_yaw_deg=15.0)
     indices = [0, len(raw) // 2, len(raw) - 1]

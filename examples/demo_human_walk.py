@@ -395,7 +395,7 @@ def main() -> None:
 
     # ── step 4: M7 post-processing ──────────────────────────────────────────
     log.info("Applying M7 cinematic post-processing …")
-    from src.modules.m7_render_engine import RenderEngine, RenderSettings
+    from src.modules.render_engine import RenderEngine, RenderSettings
 
     class _WrappedFrame:
         """Wrap a plain numpy array to look like FrameData for RenderEngine."""

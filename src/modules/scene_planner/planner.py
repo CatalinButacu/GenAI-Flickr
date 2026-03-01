@@ -136,7 +136,7 @@ class ScenePlanner:
         entity_names: List[str], relations: List[Dict]
     ) -> Dict[str, tuple]:
         """Attempt constraint-based layout. Returns empty dict on failure/no constraints."""
-        from src.modules.m2_scene_planner.constraint_layout import solve_layout
+        from src.modules.scene_planner.constraint_layout import solve_layout
         try:
             return solve_layout(entity_names, relations)
         except Exception as exc:

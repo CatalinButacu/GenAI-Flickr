@@ -1,6 +1,6 @@
 """
 #WHERE
-    Used by planner.py, constraint_layout.py, pipeline.py, m5_physics_engine,
+    Used by planner.py, constraint_layout.py, pipeline.py, physics_engine,
     benchmarks (benchmark_m2.py), and test_modules.py.
 
 #WHAT

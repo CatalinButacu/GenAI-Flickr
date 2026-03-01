@@ -46,15 +46,15 @@ class SSMMotionModel:
             return
         try:
             import torch
-            from src.modules.m4_motion_generator.nn_models import TextToMotionSSM
-            from src.modules.m4_motion_generator.trainer import TrainingConfig
+            from src.modules.motion_generator.nn_models import TextToMotionSSM
+            from src.modules.motion_generator.trainer import TrainingConfig
 
             # Legacy compat: checkpoint was pickled under old module path
             if "src.motion_generator" not in sys.modules:
-                import src.modules.m4_motion_generator as _m4
+                import src.modules.motion_generator as _m4
                 sys.modules["src.motion_generator"] = _m4
                 sys.modules["src.motion_generator.train"] = __import__(
-                    "src.modules.m4_motion_generator.train", fromlist=["train"],
+                    "src.modules.motion_generator.train", fromlist=["train"],
                 )
 
             self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

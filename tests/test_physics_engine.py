@@ -2,8 +2,8 @@
 
 import pytest
 import numpy as np
-from src.modules.m5_physics_engine.scene import ShapeFactory, Scene, PhysicsObject
-from src.modules.m5_physics_engine.camera import EasingFunctions, CinematicCamera, CameraConfig
+from src.modules.physics_engine.scene import ShapeFactory, Scene, PhysicsObject
+from src.modules.physics_engine.camera import EasingFunctions, CinematicCamera, CameraConfig
 
 
 class TestShapeFactory:

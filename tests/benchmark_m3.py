@@ -10,8 +10,8 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.m3_asset_generator import ModelGenerator
-from src.modules.m3_asset_generator.generator import GeneratedModel, ShapEBackend
+from src.modules.asset_generator import ModelGenerator
+from src.modules.asset_generator.generator import GeneratedModel, ShapEBackend
 
 
 _NOT_READY = "generator not ready"
@@ -40,13 +40,13 @@ class M3Benchmark:
         print("-" * 50)
 
         try:
-            from src.modules.m3_asset_generator import ModelGenerator  # noqa: F401
+            from src.modules.asset_generator import ModelGenerator  # noqa: F401
             self.test("1. ModelGenerator import", True)
         except ImportError as e:
             self.test("1. ModelGenerator import", False, str(e)[:30])
 
         try:
-            from src.modules.m3_asset_generator.generator import ShapEBackend, TripoSRBackend  # noqa: F401
+            from src.modules.asset_generator.generator import ShapEBackend, TripoSRBackend  # noqa: F401
             self.test("2. Backend classes", True)
         except ImportError as e:
             self.test("2. Backend classes", False, str(e)[:30])

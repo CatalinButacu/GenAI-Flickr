@@ -14,7 +14,7 @@ to re-insert the missing braces before parsing.
 Usage
 -----
     python scripts/test_m1_inference.py
-    python scripts/test_m1_inference.py --checkpoint m1_checkpoints/m1_scene_extractor
+    python scripts/test_m1_inference.py --checkpoint checkpoints/scene_understanding/scene_extractor
     python scripts/test_m1_inference.py --prompt "a dog chases a ball in the park"
 """
 
@@ -256,7 +256,7 @@ def load_test_samples(path: str, n: int = 5) -> list[dict]:
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--checkpoint", default="m1_checkpoints/m1_scene_extractor")
+    ap.add_argument("--checkpoint", default="checkpoints/scene_understanding/scene_extractor")
     ap.add_argument("--test-set",   default="data/m1_training/test.jsonl")
     ap.add_argument("--prompt",     default=None)
     ap.add_argument("--n-test",     type=int, default=4)
