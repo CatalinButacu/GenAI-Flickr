@@ -58,8 +58,9 @@ class PhysicsTrainingConfig:
     weight_decay: float      = 0.01
     num_epochs: int          = 100
     warmup_steps: int        = 500
-    grad_clip: float         = 1.0
+    grad_clip: float         = 0.5
     lambda_physics: float    = 0.1       # weight for physics violation loss
+    resume_from: str         = ""        # path to checkpoint to resume from
     checkpoint_dir: str      = os.path.dirname(DEFAULT_PHYSICS_SSM_CHECKPOINT)
     save_every: int          = 10
     patience: int            = 15        # early stopping patience (0 = disabled)
@@ -148,7 +149,32 @@ class PhysicsSSMTrainer:
 
         os.makedirs(config.checkpoint_dir, exist_ok=True)
         self.step = 0
+        self.start_epoch = 1
         self.best_loss = float("inf")
+
+        if config.resume_from and os.path.isfile(config.resume_from):
+            self._load_resume(config.resume_from)
+
+    # ── Resume from checkpoint ──────────────────────────────────────────
+
+    def _load_resume(self, path: str) -> None:
+        ck = torch.load(path, map_location=self.device, weights_only=False)
+        self.motion_ssm.load_state_dict(ck["motion_ssm_state_dict"])
+        self.physics_ssm.load_state_dict(ck["physics_ssm_state_dict"])
+        self.projector.load_state_dict(ck["projector_state_dict"])
+        self.best_loss = ck.get("val_loss", float("inf"))
+        self.step = ck.get("global_step", 0)
+        self.start_epoch = ck.get("epoch", 0) + 1
+        # Recreate scheduler for remaining steps (no warmup — model is past that)
+        remaining = max(self.config.num_epochs - self.start_epoch + 1, 1)
+        remaining_steps = max(len(self.train_loader) * remaining, 1)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer, T_max=remaining_steps, eta_min=1e-6,
+        )
+        log.info(
+            "Resumed from %s — start_epoch=%d best_loss=%.4f",
+            path, self.start_epoch, self.best_loss,
+        )
 
     # ── Loss functions ───────────────────────────────────────────────────
 
@@ -181,8 +207,9 @@ class PhysicsSSMTrainer:
         # Approximate velocity from finite differences of root position
         if T > 1:
             vel = pred_motion[:, 1:, 3:6] - pred_motion[:, :-1, 3:6]  # root vel diff
-            # Foot contacts from physics state
-            foot_contact = physics_state[:, 1:, 10:12].mean(dim=-1, keepdim=True)
+            # Foot contacts from physics state — clamp to [0,1] (binary; normalization
+            # can introduce negatives which would flip the penalty into a reward)
+            foot_contact = physics_state[:, 1:, 10:12].mean(dim=-1, keepdim=True).clamp(0.0, 1.0)
             slide_loss = (vel.pow(2) * foot_contact * mask[:, 1:].unsqueeze(-1)).mean()
             losses.append(slide_loss)
 
@@ -201,7 +228,9 @@ class PhysicsSSMTrainer:
             jerk_loss = (d3.pow(2) * jerk_mask).mean() * 0.01  # downweight
             losses.append(jerk_loss)
 
-        return sum(losses) if losses else torch.tensor(0.0, device=pred_motion.device)
+        phys = sum(losses) if losses else torch.tensor(0.0, device=pred_motion.device)
+        # Safety clamp: physics violation penalties must be non-negative
+        return phys.clamp(min=0.0)
 
     # ── Training loop ────────────────────────────────────────────────────
 
@@ -236,6 +265,12 @@ class PhysicsSSMTrainer:
             phys_loss = self._physics_violation_loss(decoded, physics, mask)
 
             loss = recon_loss + self.config.lambda_physics * phys_loss
+
+            # Guard against NaN/Inf (can occur with extreme physics state values)
+            if torch.isnan(loss) or torch.isinf(loss):
+                log.warning("NaN/Inf loss at step %d — skipping batch", self.step)
+                self.optimizer.zero_grad()
+                continue
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -340,7 +375,7 @@ class PhysicsSSMTrainer:
         )
 
         no_improve = 0
-        for epoch in range(1, self.config.num_epochs + 1):
+        for epoch in range(self.start_epoch, self.config.num_epochs + 1):
             tl, tr, tp = self._train_epoch(epoch)
             vl, vr, vp = self._validate()
 

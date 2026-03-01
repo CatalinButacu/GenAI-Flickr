@@ -41,6 +41,10 @@ def main():
     parser.add_argument("--n-layers", type=int, default=4, help="Number of SSM layers")
     parser.add_argument("--save-every", type=int, default=10,
                         help="Save checkpoint every N epochs")
+    parser.add_argument("--resume-from", type=str, default="",
+                        help="Path to checkpoint to resume from")
+    parser.add_argument("--grad-clip", type=float, default=0.5,
+                        help="Gradient clipping max norm")
     args = parser.parse_args()
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
@@ -67,6 +71,8 @@ def main():
         d_state=args.d_state,
         n_layers=args.n_layers,
         save_every=args.save_every,
+        resume_from=args.resume_from,
+        grad_clip=args.grad_clip,
     )
 
     log = logging.getLogger(__name__)
