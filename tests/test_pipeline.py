@@ -1,4 +1,4 @@
-"""Tests for Pipeline - end-to-end orchestration logic."""
+﻿"""Tests for Pipeline - end-to-end orchestration logic."""
 
 import pytest
 from pathlib import Path
@@ -13,9 +13,9 @@ class TestPipelineConfig:
         config = PipelineConfig()
         assert config.output_dir == "outputs"
         assert config.fps == 24
-        assert config.duration == 5.0
+        assert config.duration == pytest.approx(5.0)
         assert config.use_asset_generation == False
-        assert config.use_ai_enhancement == False
+        assert config.use_diffusion == False
     
     def test_custom_values(self):
         config = PipelineConfig(
@@ -26,7 +26,7 @@ class TestPipelineConfig:
         )
         assert config.output_dir == "custom_output"
         assert config.fps == 30
-        assert config.duration == 10.0
+        assert config.duration == pytest.approx(10.0)
         assert config.use_asset_generation == True
 
 
@@ -44,7 +44,7 @@ class TestPipeline:
     
     def test_not_setup_initially(self):
         pipeline = Pipeline()
-        assert pipeline._is_setup == False
+        assert pipeline.is_setup == False
     
     def test_run_returns_dict(self):
         """Verifies run returns result dict with expected keys."""
@@ -52,7 +52,7 @@ class TestPipeline:
         pipeline = Pipeline(config)
         
         # Mock the run method to avoid full pipeline execution
-        pipeline.run = lambda prompt, name="output": {"video_path": "/test/video.mp4"}
+        pipeline.run = lambda prompt, output_name="output": {"video_path": "/test/video.mp4"}
         
         result = pipeline.run("test prompt")
         assert result["video_path"] == "/test/video.mp4"
@@ -65,7 +65,7 @@ class TestPipelineIntegration:
     def minimal_pipeline(self):
         config = PipelineConfig(
             use_asset_generation=False,
-            use_ai_enhancement=False,
+            use_diffusion=False,
             duration=0.5,
             fps=5
         )
@@ -75,7 +75,7 @@ class TestPipelineIntegration:
     @pytest.mark.skipif(not _CHECKPOINT_READY, reason="T5 checkpoint not trained yet")
     def test_pipeline_setup(self, minimal_pipeline):
         minimal_pipeline.setup()
-        assert minimal_pipeline._is_setup == True
+        assert minimal_pipeline.is_setup == True
     
     @pytest.mark.slow
     @pytest.mark.skipif(not _CHECKPOINT_READY, reason="T5 checkpoint not trained yet")

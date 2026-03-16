@@ -1,4 +1,4 @@
-# Physics-Constrained Video Generation
+﻿# Physics-Constrained Video Generation
 
 Dissertation project — generate physics-realistic videos from text prompts.
 
@@ -13,14 +13,13 @@ python main.py "a red ball falls onto a blue cube"
 
 ```
 Text Prompt
-    ↓ M1  Scene Understanding  — parse entities, actions, spatial relations
-    ↓ M2  Scene Planner        — place entities in 3-D world space
-    ↓ M3  Asset Generator      — Shap-E 3-D mesh generation    (optional)
-    ↓ M4  Motion Generator     — SSM / KIT-ML motion clips     (optional)
-    ↓ M5  Physics Engine       — PyBullet simulation + camera
-    ↓ M6  RL Controller        — PPO humanoid control          (stub)
-    ↓ M7  Render Engine        — post-processing               (stub)
-    ↓ M8  AI Enhancer          — ControlNet frame enhancement  (optional)
+    ↓ M1  Scene Understanding  — T5: parse entities, actions, spatial relations
+    ↓ M2  Scene Planner        — L-BFGS-B: place entities in 3D world space
+    ↓ M3  Asset Generator      — Shap-E 3D mesh generation       (optional)
+    ↓ M4  Motion Generator     — MotionSSM + PhysicsSSM           (optional)
+    ↓ M5  Physics Simulator    — PyBullet rigid-body simulation (240 Hz)
+    ↓ M6  Render Engine        — SMPL mesh + effects + MP4 export
+    ↓ M7  AI Enhancer          — ControlNet / AnimateDiff          (optional)
     ↓ MP4 Video
 ```
 
@@ -60,49 +59,55 @@ print(result["video_path"])   # outputs/videos/output.mp4
 
 | # | Module | Status | Key files |
 |---|--------|--------|-----------|
-| M1 | Scene Understanding | ✅ Active | `prompt_parser.py`, `orchestrator.py` |
-| M2 | Scene Planner | ✅ Active | `planner.py` |
-| M3 | Asset Generator | ⚡ Optional | `generator.py` (Shap-E) |
-| M4 | Motion Generator | ⚡ Optional | `generator.py` (SSM / KIT-ML) |
-| M5 | Physics Engine | ✅ Active | `scene.py`, `simulator.py` |
-| M6 | RL Controller | 🔧 Stub | `controller.py` (PPO planned) |
-| M7 | Render Engine | 🔧 Stub | `render_engine.py` (post-proc planned) |
-| M8 | AI Enhancer | ⚡ Optional | `renderer.py` (ControlNet) |
+| M1 | Scene Understanding | ✅ Trained | `t5_parser.py`, `prompt_parser.py`, `retriever.py` |
+| M2 | Scene Planner | ✅ Active | `planner.py`, `constraint_layout.py` |
+| M3 | Asset Generator | ⚡ Optional | `generator.py` (Shap-E / TripoSR) |
+| M4 | Motion Generator | ✅ Trained | `ssm_generator.py`, `nn_models.py` (MotionSSM + PhysicsSSM) |
+| M5 | Physics Simulator | ✅ Active | `scene.py`, `simulator.py`, `humanoid.py` |
+| M6 | Render Engine | ✅ Active | `aitviewer_renderer.py`, `engine.py`, `smpl_body.py` |
+| M7 | AI Enhancer | ⚡ Optional | `controlnet_human.py`, `animatediff_human.py` |
 
 ## Project Structure
 
 ```
 main.py                        # Single entry point
 src/
-├── pipeline.py                # Pipeline orchestrator
+├── pipeline.py                # Thin orchestrator (~170 LOC)
+├── stages/                    # Pipeline stages (one per concern)
+│   ├── understanding.py       #   M1+M2: parse prompt + plan layout
+│   ├── motion.py              #   M4: generate + refine + validate motion
+│   ├── physics.py             #   M5: PyBullet simulation loop
+│   └── rendering.py           #   M6+M7: SMPL mesh rendering + video export
 ├── shared/
+│   ├── constants.py           # Physics, rendering, checkpoint paths
 │   └── vocabulary.py          # Canonical objects, actions, properties
 └── modules/
-    ├── scene_understanding/ # M1: Text → ParsedScene
+    ├── understanding/         # M1: Text → ParsedScene + KB enrichment
+    │   ├── t5_parser.py       #   T5 ML parser (default, with rules fallback)
     │   ├── prompt_parser.py   #   Rules-based parser (fast, no GPU)
-    │   └── orchestrator.py    #   T5 ML parser (StoryAgent)
-    ├── scene_planner/       # M2: ParsedScene → PlannedScene
-    ├── asset_generator/     # M3: entity → 3-D mesh (optional)
-    ├── motion_generator/    # M4: action text → motion clip (optional)
-    ├── physics_engine/      # M5: PlannedScene → frames + video
-    ├── m6_rl_controller/       # M6: PPO control (stub)
-    ├── render_engine/       # M7: post-processing (stub)
-    └── ai_enhancer/         # M8: ControlNet enhance (optional)
-config/
-└── default.yaml               # Physics / camera / output defaults
-scripts/                       # Training utilities (M1 T5, M4 SSM)
+    │   └── retriever.py       #   SBERT + FAISS knowledge base lookup
+    ├── planner/               # M2: ParsedScene → PlannedScene
+    ├── assets/                # M3: entity → 3D mesh (optional)
+    ├── motion/                # M4: action text → motion clip
+    │   └── ssm/               #   Mamba / S4 / PhysicsSSM layers
+    ├── physics/               # M5: PlannedScene → frames + video
+    ├── render/                # M6: SMPL mesh rendering + post-processing
+    └── diffusion/             # M7: ControlNet / AnimateDiff (optional)
+scripts/                       # Training utilities (M1 T5, M4 SSM, PhysicsSSM)
 tests/                         # Benchmark suites per module
-examples/                      # Standalone demo scripts
+doc/
+└── planning/                  # 6 planning docs (master plan, modules, datasets, etc.)
 ```
 
-## M1: Two parser modes
+## M1: Two Parser Modes
 
 | Mode | Class | Speed | Accuracy |
 |------|-------|-------|----------|
-| Rules (default) | `PromptParser` | Fast, no GPU | Good for common objects/actions |
-| ML (T5 seq2seq) | `StoryAgent` | Slow, requires checkpoint | Higher accuracy |
+| ML (default) | `T5SceneParser` | Requires checkpoint | Higher accuracy |
+| Rules (fallback) | `PromptParser` | Fast, no GPU | Good for common objects/actions |
 
 Train the T5 extractor:
+
 ```bash
 python scripts/train_m1_t5.py
 ```
@@ -110,8 +115,8 @@ python scripts/train_m1_t5.py
 ## Requirements
 
 - Python 3.10+
-- CUDA GPU for M3 (Shap-E) and M8 (ControlNet)
-- CPU-only sufficient for M1 (rules), M2, M5
+- CUDA GPU for M3 (Shap-E) and M7 (ControlNet)
+- CPU-only sufficient for M1 (rules), M2, M5, M6
 
 ## License
 

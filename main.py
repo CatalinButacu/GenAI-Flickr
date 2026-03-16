@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Physics-Constrained Video Generation — text prompt → MP4."""
 
 import argparse
@@ -43,7 +43,7 @@ def main() -> None:
         device=args.device,
         use_asset_generation=args.with_assets,
         use_motion_generation=args.motion,
-        use_ai_enhancement=args.with_enhance,
+        use_diffusion=args.with_enhance,
     )
     result = Pipeline(config).run(args.prompt, output_name=args.name)
     video = result.get("video_path", "")

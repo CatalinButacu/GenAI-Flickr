@@ -10,13 +10,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import argparse
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.patches import Circle
+
 
 def render_motion_video(motion: np.ndarray, output_path: str = "outputs/motion_video.mp4", fps: int = 20):
     """Render motion as stick figure animation."""
-    import matplotlib.pyplot as plt
-    import matplotlib.animation as animation
-    from matplotlib.patches import Circle
-    
     n_frames = len(motion)
     
     # Extract root trajectory and simplified joint data
@@ -107,7 +108,7 @@ def render_motion_video(motion: np.ndarray, output_path: str = "outputs/motion_v
         writer = animation.FFMpegWriter(fps=fps, bitrate=2000)
         anim.save(output_path, writer=writer)
         print(f"Video saved: {output_path}")
-    except Exception as e:
+    except Exception:
         # Fallback to GIF
         gif_path = output_path.replace('.mp4', '.gif')
         anim.save(gif_path, writer='pillow', fps=fps)
@@ -117,8 +118,6 @@ def render_motion_video(motion: np.ndarray, output_path: str = "outputs/motion_v
 
 
 def main():
-    import argparse
-    
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default="outputs/generated_motion.npy")
     parser.add_argument("--output", default="outputs/motion_video.mp4")

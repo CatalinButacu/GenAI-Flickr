@@ -1,4 +1,4 @@
-"""
+﻿"""
 Conditioning scale ablation — measures physics adherence at different
 ControlNet conditioning scales.
 
@@ -43,11 +43,11 @@ def main() -> None:
     from diffusers.schedulers.scheduling_unipc_multistep import (
         UniPCMultistepScheduler,
     )
-    from src.modules.motion_generator import MotionGenerator
-    from src.modules.physics_engine.physics_verifier import (
+    from src.modules.motion import MotionGenerator
+    from src.modules.physics.physics_verifier import (
         PhysicsAdherenceVerifier,
     )
-    from src.modules.ai_enhancer import SkeletonProjector
+    from src.modules.diffusion import SkeletonProjector
 
     out_dir = "outputs/scale_ablation"
     os.makedirs(out_dir, exist_ok=True)

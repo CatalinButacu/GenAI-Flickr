@@ -250,10 +250,6 @@ class TargetBuilder:
         )
 
 
-def _clean(d: dict) -> dict:
-    """Remove None and empty fields from a dict."""
-    return {k: v for k, v in d.items() if v not in (None, {}, [], "")}
-
 
 # ---------------------------------------------------------------------------
 # Dataset splitter  (SRP: "split samples into train/val/test")

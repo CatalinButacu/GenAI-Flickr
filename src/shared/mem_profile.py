@@ -1,44 +1,3 @@
-"""
-#WHERE
-    Used by pipeline.py, simulator.py, generator.py, ssm_model.py,
-    and any function decorated with @profile_memory.
-
-#WHAT
-    Memory profiling utilities: tracemalloc_snapshot context manager
-    and @profile_memory decorator for line-by-line RAM tracking.
-
-#INPUT
-    Label string (for snapshots), or function (for decorator).
-
-#OUTPUT
-    Logs memory delta/allocation sites; decorator is transparent.
-
-Two complementary tools:
-
-1. ``tracemalloc_snapshot(label)`` — context manager, zero install, always on.
-   Captures a before/after snapshot of every Python heap allocation inside the
-   block and logs the net delta + top-N allocation sites.
-
-2. ``@profile_memory`` — decorator for line-by-line RAM profiling.
-   Activates only when ``PROFILE_MEMORY=1`` is set in the environment.
-   Requires ``pip install memory-profiler`` (gracefully no-ops if missing).
-
-Usage::
-
-    # Trace any block
-    with tracemalloc_snapshot("M5 physics simulation"):
-        frames = sim.run_cinematic(duration=5.0)
-
-    # Activate line-level profiling for a specific function
-    @profile_memory
-    def my_heavy_method(self, ...):
-        ...
-
-    # Run with line-level profiling enabled (Windows):
-    #   set PROFILE_MEMORY=1 && python main.py "a ball falls"
-    # Linux / macOS:
-    #   PROFILE_MEMORY=1 python main.py "a ball falls"
-"""
 from __future__ import annotations
 
 import contextlib
@@ -53,28 +12,25 @@ log = logging.getLogger(__name__)
 _TRUTHY = {"1", "true", "yes", "on"}
 _PROFILE_ACTIVE = os.environ.get("PROFILE_MEMORY", "0").strip().lower() in _TRUTHY
 
+try:
+    from memory_profiler import profile as _mp_profile  # type: ignore[import-untyped]
+except ImportError:
+    _mp_profile = None  # package not installed — profile_memory becomes a no-op
+
 
 @contextlib.contextmanager
 def tracemalloc_snapshot(label: str, top_n: int = 10) -> Generator[None, None, None]:
     """Context manager: capture heap allocation delta around a code block.
 
-    Logs:
-    - Net memory change in KB (+ means growth, - means freed)
-    - Absolute heap before → after in MB
-    - Top-*top_n* allocation sites by size increase (at DEBUG level)
-
-    Does not require any third-party packages — uses stdlib ``tracemalloc``.
-    Safe to nest; only the outermost call stops tracing on exit.
-
-    Example::
-
-        with tracemalloc_snapshot("M5 physics"):
-            frames = sim.run_cinematic(duration=5.0, fps=24)
-        # INFO  [mem] M5 physics: +14 KB  (2.1 MB → 2.1 MB)
+    Only active when ``PROFILE_MEMORY=1``.  Otherwise a transparent no-op.
     """
+    if not _PROFILE_ACTIVE:
+        yield
+        return
+
     already_tracing = tracemalloc.is_tracing()
     if not already_tracing:
-        tracemalloc.start(25)  # capture 25-frame tracebacks
+        tracemalloc.start(25)
 
     snapshot_before = tracemalloc.take_snapshot()
     stats_before = snapshot_before.statistics("lineno")
@@ -84,35 +40,36 @@ def tracemalloc_snapshot(label: str, top_n: int = 10) -> Generator[None, None, N
         yield
     finally:
         snapshot_after = tracemalloc.take_snapshot()
-        stats_after = snapshot_after.statistics("lineno")
-        mem_after = sum(s.size for s in stats_after)
+        _log_memory_delta(label, snapshot_before, snapshot_after, mem_before, top_n)
+        if not already_tracing:
+            tracemalloc.stop()
 
-        diff = mem_after - mem_before
-        sign = "+" if diff >= 0 else ""
-        log.info(
-            "[mem] %s: %s%d KB  (%.2f MB → %.2f MB)",
-            label,
-            sign,
-            diff // 1024,
-            mem_before / 1024 / 1024,
-            mem_after / 1024 / 1024,
-        )
 
-        top = snapshot_after.compare_to(snapshot_before, "lineno")[:top_n]
-        for rank, stat in enumerate(top, 1):
-            if stat.size_diff == 0:
-                continue
-            site = str(stat.traceback[0]) if stat.traceback else "<unknown>"
-            log.debug(
-                "[mem]  #%-2d  %+8.1f KB  count %+d  |  %s",
-                rank,
-                stat.size_diff / 1024,
+def _log_memory_delta(label, snapshot_before, snapshot_after, mem_before, top_n):
+    """Log heap memory change and top allocation sites."""
+    stats_after = snapshot_after.statistics("lineno")
+    mem_after = sum(s.size for s in stats_after)
+
+    diff = mem_after - mem_before
+    sign = "+" if diff >= 0 else ""
+    log.info(
+        "[mem] %s: %s%d KB  (%.2f MB → %.2f MB)",
+        label, sign, diff // 1024,
+        mem_before / 1024 / 1024, mem_after / 1024 / 1024,
+    )
+
+    top = snapshot_after.compare_to(snapshot_before, "lineno")[:top_n]
+    for rank, stat in enumerate(top, 1):
+        if stat.size_diff == 0:
+            continue
+        site = str(stat.traceback[0]) if stat.traceback else "<unknown>"
+        log.debug(
+            "[mem]  #%-2d  %+8.1f KB  count %+d  |  %s",
+            rank,
+            stat.size_diff / 1024,
                 stat.count_diff,
                 site,
             )
-
-        if not already_tracing:
-            tracemalloc.stop()
 
 
 def profile_memory(fn):
@@ -147,19 +104,17 @@ def profile_memory(fn):
     if not _PROFILE_ACTIVE:
         return fn
 
-    try:
-        from memory_profiler import profile as _mp_profile  # type: ignore[import-untyped]
-
-        decorated = _mp_profile(fn)
-        log.debug(
-            "[mem] memory_profiler active → %s.%s",
-            fn.__module__,
-            fn.__qualname__,
-        )
-        return decorated
-    except ImportError:
+    if _mp_profile is None:
         log.warning(
             "[mem] PROFILE_MEMORY=1 but 'memory-profiler' is not installed. "
             "Run:  pip install memory-profiler"
         )
         return fn
+
+    decorated = _mp_profile(fn)
+    log.debug(
+        "[mem] memory_profiler active → %s.%s",
+        fn.__module__,
+        fn.__qualname__,
+    )
+    return decorated

@@ -1,0 +1,39 @@
+﻿\chapter{Anexa: Structura repository-ului}
+\label{chap:anexa}
+
+\begin{verbatim}
+GenAI-Flickr/
+|-- src/
+|   |-- pipeline.py              # Orchestratorul principal (918 linii)
+|   |-- shared/                  # Constante, vocabular, profiler
+|   |-- data/                    # Data loaders (KIT-ML)
+|   +-- modules/
+|       |-- understanding/       # M1: T5 parser + FAISS retriever
+|       |-- planner/             # M2: scipy L-BFGS-B
+|       |-- assets/              # M3: Shap-E (optional)
+|       |-- motion/              # M4: SSM + PhysicsSSM
+|       |   +-- ssm/            #     Mamba, S4, composites
+|       |-- physics/             # M5: PyBullet, SMPL, humanoid
+|       |-- render/              # M6: SMPL mesh, motion blur, DoF, grading
+|       +-- diffusion/           # M7: ControlNet + AnimateDiff
+|-- scripts/
+|   |-- train_m1_t5.py           # Antrenare T5 parser
+|   |-- train_motion_ssm.py      # Antrenare MotionSSM
+|   |-- train_physics_ssm.py     # Antrenare PhysicsSSM
+|   |-- body_validator.py        # Validator biomechanic (512 linii)
+|   |-- motion_pipeline.py       # Pipeline LangGraph (backup)
+|   |-- prompt_to_video.py       # Wrapper text -> MP4
+|   +-- render_sequence.py       # NPY -> video
+|-- tests/
+|   |-- benchmark_m1.py          # 25 teste M1
+|   |-- benchmark_m2.py          # 30 teste M2
+|   |-- benchmark_m3.py          # 15 teste M3
+|   |-- benchmark_m4.py          # 30 teste M4
+|   |-- benchmark_m5.py          # 30 teste M5
+|   +-- run_all_benchmarks.py    # Runner (130 teste total)
+|-- checkpoints/                 # Modele antrenate (.pt)
+|-- data/
+|   |-- KIT-ML/                  # 4.886 secvente motion capture
+|   +-- knowledge_base/          # 12 obiecte Visual Genome
++-- doc/paper/                   # Aceasta lucrare (LaTeX)
+\end{verbatim}

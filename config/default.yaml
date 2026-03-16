@@ -9,6 +9,10 @@ physics:
   gravity: -9.81
   timestep: 0.00416667         # 1/240 s  (240 Hz)
   sim_hz: 240
+  humanoid_urdf:  "assets/humanoid/humanoid.urdf"
+  ground_plane:   true
+  self_collision: true
+  max_sim_steps:  10000
 
 # ── Camera / rendering ──────────────────────────────────────
 camera:
@@ -31,14 +35,15 @@ output:
 
 # ── Data paths ───────────────────────────────────────────────
 data:
-  kit_ml_dir:      "data/KIT-ML"
+  # NOTE: also defined as DEFAULT_DATA_DIR in src/shared/constants.py — keep in sync.
+  amass_dir:       "data/AMASS"
   knowledge_base:  "data/knowledge_base"
   training_dir:    "data/training"
 
 # ── Checkpoints ──────────────────────────────────────────────
 checkpoints:
-  # scene_understanding (T5 scene parser)
-  scene_understanding: "checkpoints/scene_understanding/scene_extractor_v5"
+  # understanding (T5 scene parser)
+  understanding: "checkpoints/understanding/scene_extractor_v5"
 
   # motion_generator (MotionSSM)
   motion_ssm:          "checkpoints/motion_ssm/best_model.pt"
@@ -46,8 +51,8 @@ checkpoints:
   # motion_generator (PhysicsSSM + MotionProjector)
   physics_ssm:         "checkpoints/physics_ssm/best_model.pt"
 
-# ── scene_understanding ──────────────────────────────────────
-scene_understanding:
+# ── understanding ────────────────────────────────────────────
+understanding:
   model_name:    "google/flan-t5-base"
   max_length:    512
   batch_size:    8
@@ -59,8 +64,8 @@ motion_generator:
   d_model:        256
   d_state:        32
   n_layers:       4
-  motion_dim:     251          # KIT-ML / HumanML3D feature size
-  motion_fps:     20           # KIT-ML capture frame rate
+  motion_dim:     168          # SMPL-X axis-angle pose size
+  motion_fps:     30           # AMASS capture frame rate
   max_seq_len:    200
   batch_size:     16
   learning_rate:  5e-5
@@ -70,22 +75,16 @@ motion_generator:
   warmup_steps:   500
   patience:       15
 
-# ── physics_engine ───────────────────────────────────────────
-physics_engine:
-  humanoid_urdf:  "assets/humanoid/humanoid.urdf"
-  ground_plane:   true
-  self_collision: true
-  max_sim_steps:  10000
-
 # ── render_engine ────────────────────────────────────────────
 render_engine:
   backend:  "pybullet"
   width:    640
   height:   480
 
-# ── ai_enhancer ──────────────────────────────────────────────
-ai_enhancer:
+# ── diffusion ────────────────────────────────────────────────
+diffusion:
   controlnet_model:    "lllyasviel/control_v11p_sd15_openpose"
   animatediff_model:   "guoyww/animatediff-motion-adapter-v1-5-2"
   num_inference_steps: 20
   guidance_scale:      7.5
+

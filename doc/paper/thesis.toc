@@ -1,0 +1,59 @@
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{\numberline {1}Introducere}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}De ce acest proiect?}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Formularea problemei}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Obiectivele lucrării}{1}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Structura lucrării}{2}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Fundamente teoretice}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Rețele neuronale --- de la neuron la transformer}{3}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Neuronul artificial}{3}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Rețele feedforward (MLP)}{3}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}Mecanismul de atenție (Transformers)}{3}{subsection.2.1.3}%
+\contentsline {section}{\numberline {2.2}State Space Models (SSM)}{4}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Ce este un SSM?}{4}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Discretizarea}{4}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}S4 și HiPPO}{4}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}Mamba --- SSM selectiv}{5}{subsection.2.2.4}%
+\contentsline {section}{\numberline {2.3}Simularea fizică}{5}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}PyBullet și Bullet Physics}{5}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Controlul articulațiilor --- motoare PD}{5}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Detecția de contact}{5}{subsection.2.3.3}%
+\contentsline {section}{\numberline {2.4}Retrieval-Augmented Generation (RAG)}{6}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Arhitectura sistemului}{7}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Vedere de ansamblu}{7}{section.3.1}%
+\contentsline {section}{\numberline {3.2}M1 --- înțelegerea scenei}{7}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Parserul T5}{7}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Knowledge Retriever (FAISS)}{7}{subsection.3.2.2}%
+\contentsline {section}{\numberline {3.3}M2 --- planificatorul de scenă}{8}{section.3.3}%
+\contentsline {section}{\numberline {3.4}M4 --- generatorul de mișcare}{8}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Retrieval din KIT-ML}{8}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}MotionSSM --- modelarea temporală}{8}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}PhysicsSSM --- contribuția originală}{8}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}M5 --- motorul de fizică}{9}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Scena PyBullet}{9}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Humanoidul}{9}{subsection.3.5.2}%
+\contentsline {subsection}{\numberline {3.5.3}Detecția de contact}{9}{subsection.3.5.3}%
+\contentsline {section}{\numberline {3.6}M7 --- post-procesare video}{9}{section.3.6}%
+\contentsline {section}{\numberline {3.7}M8 --- îmbunătățire AI (opțional)}{10}{section.3.7}%
+\contentsline {chapter}{\numberline {4}Implementare}{11}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Mediu de dezvoltare}{11}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Structura codului}{11}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Datele de antrenare}{12}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}KIT Motion Language (KIT-ML)}{12}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Starea fizică derivată}{12}{subsection.4.3.2}%
+\contentsline {subsection}{\numberline {4.3.3}Baza de cunoștințe (Knowledge Base)}{12}{subsection.4.3.3}%
+\contentsline {section}{\numberline {4.4}Antrenarea M1 --- T5 Parser}{13}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Antrenarea M4 --- MotionSSM}{13}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Antrenarea M4 --- PhysicsSSM (contribuția originală)}{13}{section.4.6}%
+\contentsline {chapter}{\numberline {5}Experimente și rezultate}{14}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Benchmark M1 --- Calitatea parsării}{14}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Benchmark M4 --- Calitatea mișcării}{14}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Benchmark M5 --- Aderența fizică}{14}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Pipeline end-to-end}{14}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Analiza calitativă}{14}{section.5.5}%
+\contentsline {chapter}{\numberline {6}Concluzii}{15}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Contribuții}{15}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Limitări}{15}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Direcții viitoare}{15}{section.6.3}%
+\contentsline {chapter}{\numberline {7}Anexa: Structura repository-ului}{16}{chapter.7}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

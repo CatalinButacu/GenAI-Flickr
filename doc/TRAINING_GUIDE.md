@@ -15,10 +15,10 @@ This document describes the training status and procedures for each module.
 | M3: Asset Generator | No | Pretrained Shap-E/TripoSR | — | — |
 | M4: Motion SSM | Yes | **Trained** (250 ep, loss=0.37) | KIT-ML (4.9k) | `scripts/train_motion_ssm.py` |
 | M4: KIT-ML Retriever | No | SBERT semantic search | KIT-ML | — |
-| **M4: PhysicsSSM** | **Yes** | **Training** | KIT-ML + derived physics | `scripts/train_physics_ssm.py` |
+| **M4: PhysicsSSM** | **Yes** | **Trained** | KIT-ML + derived physics | `scripts/train_physics_ssm.py` |
 | M5: Physics Engine | No | PyBullet simulation | — | — |
-| M7: Render Engine | No | OpenCV post-processing | — | — |
-| M8: AI Enhancer | No | Pretrained SD+ControlNet | — | — |
+| M6: Render Engine | No | SMPL + aitviewer + OpenCV | — | — |
+| M7: AI Enhancer | No | Pretrained SD+ControlNet | — | — |
 
 ---
 
@@ -42,12 +42,12 @@ Fine-tuned `google/flan-t5-small` for text → JSON scene extraction.
 python scripts/train_m1_t5.py \
     --epochs 15 --batch-size 4 --lr 5e-5 \
     --data-dir data/m1_training \
-    --output-dir m1_checkpoints/m1_scene_extractor_v6
+    --output-dir checkpoints/understanding/scene_extractor_v6
 ```
 
 **Data:** `data/m1_training/` — 40,000 train samples (.jsonl, 35.5 MB).
 **Source:** Built from Visual Genome (`data/M1_VisualGenome/`, 4.85 GB) via `scripts/build_vg_dataset.py`.
-**Checkpoint:** `m1_checkpoints/m1_scene_extractor_v5/model.safetensors` (293 MB).
+**Checkpoint:** `checkpoints/understanding/scene_extractor_v5/model.safetensors` (293 MB).
 
 ---
 
@@ -57,7 +57,7 @@ Custom `TextToMotionSSM`: SimpleTextEncoder → 4× MambaLayer → MotionDecoder
 
 ### Training Details
 
-- **Data:** KIT-ML — 4,886 train / 300 val samples, 251-dim joint vectors at 20 fps
+- **Data:** AMASS + InterX — SMPL-X 168-dim pose params at 30 fps
 - **Architecture:** d_model=256, d_state=32, n_layers=4, vocab≈10k
 - **Optimizer:** AdamW + OneCycleLR, lr=5e-5, weight_decay=0.01
 - **Duration:** 250 epochs, ~76,500 steps
@@ -69,7 +69,7 @@ Custom `TextToMotionSSM`: SimpleTextEncoder → 4× MambaLayer → MotionDecoder
 ```bash
 python scripts/train_motion_ssm.py \
     --epochs 250 --batch-size 16 --lr 5e-5 \
-    --data-dir data/KIT-ML --device cuda
+    --data-dir data/AMASS --device cuda
 ```
 
 ---
@@ -158,8 +158,8 @@ To expand the KB, add entries to `data/knowledge_base/objects/` following the ex
 | M2 ScenePlanner | scipy L-BFGS-B solver | Deterministic constraint optimisation |
 | M3 AssetGenerator | Pretrained Shap-E / TripoSR | Downloads from HuggingFace |
 | M5 PhysicsEngine | PyBullet rigid-body sim | URDF humanoid + PD joint control |
-| M7 RenderEngine | OpenCV post-processing | Motion blur, DoF, colour grade |
-| M8 AIEnhancer | Pretrained SD 1.5 + ControlNet + AnimateDiff | Downloads from HuggingFace |
+| M6 RenderEngine | SMPL + aitviewer + OpenCV post-processing | Mesh rendering, motion blur, DoF, colour grade |
+| M7 AIEnhancer | Pretrained SD 1.5 + ControlNet + AnimateDiff | Downloads from HuggingFace |
 
 ---
 
@@ -167,7 +167,10 @@ To expand the KB, add entries to `data/knowledge_base/objects/` following the ex
 
 | Path | Size | Format | Used By |
 |------|------|--------|---------|
-| `data/KIT-ML/` | 2.23 GB | `.npy` joints + `.txt` | M4 training + retrieval |
+| `data/AMASS/` | ~50 GB | `.npz` SMPL-X params | M4 training + retrieval |
+| `data/inter-x/` | ~10 GB | `.npz` SMPL-X params | M4 training (multi-person) |
+| `data/PAHOI/` | varies | `.npz` SMPL-X params | M4 training (HOI) |
+| `data/ARCTIC/` | varies | `.npz` SMPL-X params | M4 training (hand interactions) |
 | `data/m1_training/` | 35.5 MB | `.jsonl` (40k samples) | M1 T5 finetuning |
 | `data/M1_VisualGenome/` | 4.85 GB | Raw VG data | M1 dataset building |
 | `data/knowledge_base/` | ~1 MB | JSON + FAISS index | M1 KB retriever |
@@ -178,9 +181,9 @@ To expand the KB, add entries to `data/knowledge_base/objects/` following the ex
 
 | Path | Size | Module | Status |
 |------|------|--------|--------|
-| `m1_checkpoints/m1_scene_extractor_v5/` | 293 MB | M1 T5 | Best (loss=0.062) |
+| `checkpoints/understanding/scene_extractor_v5/` | 293 MB | M1 T5 | Best (loss=0.062) |
 | `checkpoints/motion_ssm/best_model.pt` | 58 MB | M4 MotionSSM | Best (loss=0.371) |
-| `checkpoints/physics_ssm/best_model.pt` | TBD | M4 PhysicsSSM | Training... |
+| `checkpoints/physics_ssm/best_model.pt` | TBD | M4 PhysicsSSM | **Trained** |
 
 ---
 

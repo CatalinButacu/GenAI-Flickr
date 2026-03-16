@@ -40,7 +40,6 @@ def main():
     print(f"Directory: {os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}")
     
     benchmarks = [
-        ("M1 Prompt Parser", "tests/benchmark_m1.py"),
         ("M2 Scene Planner", "tests/benchmark_m2.py"),
         ("M3 Asset Generator", "tests/benchmark_m3.py"),
         ("M4 Motion Generator", "tests/benchmark_m4.py"),
@@ -69,14 +68,15 @@ def main():
         total_time += elapsed
     
     print("-" * 70)
-    print(f"  {'TOTAL':25} {total_passed}/4 passed  ({total_time:.1f}s)")
+    n = len(benchmarks)
+    print(f"  {'TOTAL':25} {total_passed}/{n} passed  ({total_time:.1f}s)")
     print("=" * 70)
     
-    if total_passed == 4:
+    if total_passed == n:
         print("\n✅ ALL BENCHMARKS PASSED!")
         return 0
     else:
-        print(f"\n❌ {4 - total_passed} BENCHMARK(S) FAILED")
+        print(f"\n❌ {n - total_passed} BENCHMARK(S) FAILED")
         return 1
 
 

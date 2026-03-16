@@ -1,4 +1,4 @@
-"""
+﻿"""
 M1 Quality Benchmark
 ====================
 Evaluates the fine-tuned flan-T5-small scene extractor on the held-out test set.
@@ -14,7 +14,7 @@ Metrics computed:
 
 Usage:
     python scripts/benchmark_m1_quality.py
-    python scripts/benchmark_m1_quality.py --checkpoint checkpoints/scene_understanding/scene_extractor_v5
+    python scripts/benchmark_m1_quality.py --checkpoint checkpoints/understanding/scene_extractor_v5
     python scripts/benchmark_m1_quality.py --n 500   # evaluate 500 samples (default: 200)
 """
 
@@ -28,6 +28,11 @@ import time
 from pathlib import Path
 from typing import Any
 
+import torch
+from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+from rouge_score import rouge_scorer
+from transformers import T5ForConditionalGeneration, AutoTokenizer
+
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT))
 
@@ -37,8 +42,6 @@ sys.path.insert(0, str(_ROOT))
 # ---------------------------------------------------------------------------
 
 def load_model(checkpoint: str):
-    from transformers import T5ForConditionalGeneration, AutoTokenizer
-    import torch
     path = Path(checkpoint)
     if not (path / "config.json").exists():
         raise FileNotFoundError(f"No checkpoint at '{path}'.")
@@ -52,7 +55,6 @@ def load_model(checkpoint: str):
 
 def predict(model, tokenizer, device: str, prompt: str,
             max_out: int = 512, beams: int = 4) -> str:
-    import torch
     ids = tokenizer(f"extract scene: {prompt}", max_length=256,
                     truncation=True, return_tensors="pt").to(device)
     with torch.no_grad():
@@ -195,7 +197,6 @@ def _count_accuracy(preds, refs, key: str) -> int:
 
 
 def _try_bleu(ref_jsons, pred_jsons) -> float | None:
-    from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
     refs_tok = [[ref.split()] for ref in ref_jsons]
     preds_tok = [pred.split() for pred in pred_jsons]
     sf = SmoothingFunction().method1
@@ -205,7 +206,6 @@ def _try_bleu(ref_jsons, pred_jsons) -> float | None:
 
 
 def _try_rouge(ref_jsons, pred_jsons, n: int) -> float | None:
-    from rouge_score import rouge_scorer
     scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
     scores = [scorer.score(ref, pred)["rougeL"].fmeasure
               for ref, pred in zip(ref_jsons, pred_jsons)]
@@ -266,7 +266,7 @@ def _save_results(metrics: dict[str, Any], elapsed: float, n: int,
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--checkpoint", default="checkpoints/scene_understanding/scene_extractor_v5")
+    ap.add_argument("--checkpoint", default="checkpoints/understanding/scene_extractor_v5")
     ap.add_argument("--test-file", default="data/m1_training/test.jsonl")
     ap.add_argument("--n", type=int, default=200,
                     help="Number of test samples to evaluate (default 200)")

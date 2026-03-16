@@ -1,4 +1,4 @@
-# Module Development Research
+﻿# Module Development Research
 *Context: M1 (flan-T5-small) is training — eval_loss 0.0719 at epoch 4 → targeting < 0.05.*
 *This document covers library options and upgrade paths for M2, M4, M5, M6, M8 once M1 is stable.*
 
@@ -7,7 +7,7 @@
 ## M2 — Scene Planner
 
 ### Current State
-`src/modules/m2_scene_planner/planner.py` is a **pure rules-based** spatial layout engine.
+`src/modules/planner/planner.py` is a **pure rules-based** spatial layout engine.
 It hand-codes actor/object placement using fixed constants (`_ACTOR_DIST = 1.5`, `_OBJ_SPACE = 0.4`,
 `_FALL_H = 1.5`). Logic handles ~3 action types (`fall`, `kick`, `pick_up`). Cannot generalize
 to new spatial relations or complex multi-agent scenes.
@@ -220,7 +220,7 @@ This is exactly the right plan.
 ```python
 import gymnasium as gym
 import numpy as np
-from src.modules.m5_physics_engine.engine import PhysicsScene
+from src.modules.physics.engine import PhysicsScene
 
 class PhysicsSceneEnv(gym.Env):
     """Wraps M5 PhysicsScene as a standard gymnasium environment."""
@@ -286,7 +286,7 @@ model = PPO(
     device="cuda",
 )
 model.learn(total_timesteps=1_000_000)
-model.save("checkpoints/m6_ppo/humanoid_walk")
+model.save("checkpoints/rl_ppo/humanoid_walk")
 ```
 
 ```bash

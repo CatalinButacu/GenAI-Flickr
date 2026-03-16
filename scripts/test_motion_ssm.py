@@ -17,8 +17,8 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
-from src.modules.motion_generator.nn_models import TextToMotionSSM
-from src.modules.motion_generator.trainer import TrainingConfig
+from src.modules.motion.nn_models import TextToMotionSSM
+from src.modules.motion.trainer import TrainingConfig
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -69,15 +69,11 @@ class MotionInference:
         # Generate
         motion, length_pred = self.model(token_ids, num_frames)
         
-        motion = motion.cpu().numpy()[0]  # (frames, 251)
+        motion = motion.cpu().numpy()[0]  # (frames, 168)
         length_pred = int(length_pred.cpu().numpy()[0])
         
-        # Denormalize if we have stats
-        try:
-            mean = np.load("data/KIT-ML/Mean.npy")
-            std = np.load("data/KIT-ML/Std.npy")
-            motion_denorm = motion * (std + 1e-8) + mean
-        except Exception:
+        # SMPL-X 168-dim output — no denormalization needed
+        motion_denorm = motion
             motion_denorm = motion
         
         return {
@@ -162,7 +158,7 @@ def main():
             stats = inference.analyze_motion(result)
             
             print(f"\n  Generated {result['num_frames']} frames")
-            print(f"  Predicted duration: {result['predicted_length']/20:.1f}s")
+            print(f"  Predicted duration: {result['predicted_length']/30:.1f}s")
             print(f"  Motion shape: {stats['shape']}")
             print(f"  Smoothness: {stats['smoothness']:.4f}")
             print()
@@ -173,7 +169,7 @@ def main():
         
         print(f"\n  Prompt: {prompt}")
         print(f"  Generated: {result['num_frames']} frames")
-        print(f"  Predicted length: {result['predicted_length']} frames ({result['predicted_length']/20:.1f}s)")
+        print(f"  Predicted length: {result['predicted_length']} frames ({result['predicted_length']/30:.1f}s)")
         print(f"  Motion shape: {stats['shape']}")
         print(f"  Motion mean: {stats['mean']:.4f}")
         print(f"  Motion std: {stats['std']:.4f}")

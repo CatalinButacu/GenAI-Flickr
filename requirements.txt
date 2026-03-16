@@ -1,43 +1,50 @@
-# Dissertation Project Requirements
+# ─────────────────────────────────────────────────────────────────────────────
+# Core Runtime Requirements
+# Install:  pip install -r requirements.txt
+# Optional: pip install -r requirements-optional.txt
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Core
+# ── Core utilities ────────────────────────────────────────────────────────────
 numpy>=1.24.0
 pillow>=10.0.0
 pyyaml>=6.0
 tqdm>=4.65.0
 
-# Physics Engine
+# ── Physics simulation (M5) ───────────────────────────────────────────────────
 pybullet>=3.2.5
 
-# Video Processing
+# ── Video I/O ─────────────────────────────────────────────────────────────────
 imageio>=2.31.0
 imageio-ffmpeg>=0.4.9
 opencv-python>=4.8.0
 
-# 3D Model Generation (Shap-E via HuggingFace)
+# ── Deep learning core ────────────────────────────────────────────────────────
 torch>=2.0.0
 transformers>=4.35.0
 diffusers>=0.24.0
 accelerate>=0.24.0
-trimesh>=4.0.0
 
-# M2: Constraint-based spatial layout
+# ── 3D mesh / rendering ───────────────────────────────────────────────────────
+trimesh>=4.0.0
+open3d>=0.18.0
+pyrender>=0.1.45
+
+# ── M3 constraint solver ──────────────────────────────────────────────────────
 scipy>=1.11.0
 
-# M4: Semantic motion retrieval (SBERT)
+# ── M4 semantic retrieval ─────────────────────────────────────────────────────
 sentence-transformers>=2.2.0
-
-# Knowledge base index (FAISS)
 faiss-cpu>=1.7.4
 
-# M1: Training & evaluation metrics
+# ── M1 training & evaluation ──────────────────────────────────────────────────
 datasets>=2.14.0
 rouge-score>=0.1.2
 nltk>=3.8.0
+
+# ── Experiment tracking ───────────────────────────────────────────────────────
 wandb>=0.15.0
 
-# Video Enhancement (ControlNet) - optional
-# safetensors>=0.4.0
-
-# Story Agent (LLM mode) - optional
-# openai>=1.0.0
+# ── Profiling (REQUIRED for mem_profile.py to function with PROFILE_MEMORY=1) ─
+# memory-profiler is imported conditionally (try/except) so the project will
+# run WITHOUT this package; it only becomes active when PROFILE_MEMORY=1.
+memory-profiler>=0.61.0

@@ -1,53 +1,56 @@
-"""Tests for Physics Engine - scene and simulation logic."""
+﻿"""Tests for Physics Engine - scene and simulation logic."""
 
 import pytest
 import numpy as np
-from src.modules.physics_engine.scene import ShapeFactory, Scene, PhysicsObject
-from src.modules.physics_engine.camera import EasingFunctions, CinematicCamera, CameraConfig
+from src.modules.physics.scene import create_shape, Scene, PhysicsObject
+from src.modules.physics.camera import (
+    easing_linear, easing_smooth, easing_ease_in, easing_ease_out,
+    apply_easing, CinematicCamera, CameraConfig,
+)
 
 
-class TestShapeFactory:
+class TestCreateShape:
     
     def test_unknown_shape_raises_error(self):
         with pytest.raises(ValueError, match="Unknown shape"):
-            ShapeFactory.create("invalid", [0.1], [1, 0, 0, 1])
+            create_shape("invalid", [0.1], [1, 0, 0, 1])
 
 
 class TestEasingFunctions:
     
     def test_linear_at_zero(self):
-        assert EasingFunctions.linear(0) == 0
+        assert easing_linear(0) == 0
     
     def test_linear_at_one(self):
-        assert EasingFunctions.linear(1) == 1
+        assert easing_linear(1) == 1
     
     def test_linear_midpoint(self):
-        assert EasingFunctions.linear(0.5) == pytest.approx(0.5)
+        assert easing_linear(0.5) == pytest.approx(0.5)
     
     def test_smooth_at_zero(self):
-        assert EasingFunctions.smooth(0) == 0
+        assert easing_smooth(0) == 0
     
     def test_smooth_at_one(self):
-        assert EasingFunctions.smooth(1) == 1
+        assert easing_smooth(1) == 1
     
     def test_smooth_midpoint(self):
         # Hermite smoothstep at 0.5: 3*(0.5)^2 - 2*(0.5)^3 = 0.5
-        assert EasingFunctions.smooth(0.5) == pytest.approx(0.5)
+        assert easing_smooth(0.5) == pytest.approx(0.5)
     
     def test_ease_in_starts_slow(self):
         # Quadratic ease-in: slow at start
-        assert EasingFunctions.ease_in(0.25) < 0.25
+        assert easing_ease_in(0.25) < 0.25
     
     def test_ease_out_ends_slow(self):
         # Quadratic ease-out: slows down at end
-        assert EasingFunctions.ease_out(0.25) > 0.25
+        assert easing_ease_out(0.25) > 0.25
     
     def test_apply_clamps_values(self):
-        assert EasingFunctions.apply(-0.5, "linear") == 0
-        assert EasingFunctions.apply(1.5, "linear") == 1
+        assert apply_easing(-0.5, "linear") == 0
+        assert apply_easing(1.5, "linear") == 1
     
     def test_apply_unknown_easing_uses_linear(self):
-        assert EasingFunctions.apply(0.5, "unknown") == pytest.approx(0.5)
+        assert apply_easing(0.5, "unknown") == pytest.approx(0.5)
 
 
 class TestCinematicCamera:

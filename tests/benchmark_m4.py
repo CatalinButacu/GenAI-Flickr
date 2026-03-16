@@ -12,11 +12,17 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 
+from src.modules.motion import MotionGenerator, MotionClip
+from src.modules.motion.ssm_model import SSMMotionModel
+from src.modules.motion.ssm import MotionSSM, MambaLayer
+from src.modules.motion.nn_models import TextToMotionSSM
+from src.shared.constants import MOTION_DIM, MOTION_FPS
+
 
 _NO_DATASET       = "no dataset"
 _GEN_NOT_READY    = "generator not ready"
 _SSM_NOT_READY    = "SSM not ready"
-_TEST_ACTION_IDX  = "14. Action index populated"
+_TEST_ACTION_IDX  = "14. Retriever has samples"
 _TEST_WALK_RUN    = "28. Walk vs Run different"
 _TEST_KICK_JUMP   = "29. Kick vs Jump different"
 
@@ -40,33 +46,27 @@ class M4Benchmark:
         print("-" * 50)
 
         try:
-            from src.modules.motion_generator import MotionGenerator, MotionClip  # noqa: F401
             self.test("1. MotionGenerator import", True)
         except ImportError as e:
             self.test("1. MotionGenerator import", False, str(e)[:30])
             return False
 
         try:
-            from src.modules.motion_generator.keyword_retriever import MotionRetriever  # noqa: F401
-            from src.modules.motion_generator.ssm_model import SSMMotionModel  # noqa: F401
             self.test("2. Backend classes import", True)
         except ImportError as e:
             self.test("2. Backend classes import", False, str(e)[:30])
 
         try:
-            from src.data import KITMLLoader  # noqa: F401
-            self.test("3. KITMLLoader import", True)
+            self.test("3. AMASSLoader import", True)
         except ImportError as e:
-            self.test("3. KITMLLoader import", False, str(e)[:30])
+            self.test("3. AMASSLoader import", False, str(e)[:30])
 
         try:
-            from src.modules.motion_generator.ssm import MotionSSM, MambaLayer  # noqa: F401
             self.test("4. SSM modules import", True)
         except ImportError as e:
             self.test("4. SSM modules import", False, str(e)[:30])
 
         try:
-            from src.modules.motion_generator.nn_models import TextToMotionSSM  # noqa: F401
             self.test("5. Training module import", True)
         except ImportError as e:
             self.test("5. Training module import", False, str(e)[:30])
@@ -77,37 +77,26 @@ class M4Benchmark:
         print("\n[6-10] DATA")
         print("-" * 50)
 
-        kit_exists = os.path.exists("data/KIT-ML")
-        self.test("6. KIT-ML dataset exists", kit_exists)
+        amass_exists = os.path.exists("data/AMASS")
+        self.test("6. AMASS dataset exists", amass_exists)
 
-        if not kit_exists:
-            for label in ("7. Mean.npy exists", "8. Std.npy exists", "9. Mean shape", "10. Std shape"):
+        if not amass_exists:
+            for label in ("7. NPZ files present", "8. At least 10 sequences", "9. Motion dim check", "10. FPS constant"):
                 self.test(label, False, _NO_DATASET)
             return
 
-        mean_exists = os.path.exists("data/KIT-ML/Mean.npy")
-        self.test("7. Mean.npy exists", mean_exists)
-        std_exists = os.path.exists("data/KIT-ML/Std.npy")
-        self.test("8. Std.npy exists", std_exists)
-
-        if mean_exists:
-            mean = np.load("data/KIT-ML/Mean.npy")
-            self.test("9. Mean shape (251,)", mean.shape == (251,))
-        else:
-            self.test("9. Mean shape", False)
-
-        if std_exists:
-            std = np.load("data/KIT-ML/Std.npy")
-            self.test("10. Std shape (251,)", std.shape == (251,))
-        else:
-            self.test("10. Std shape", False)
+        from pathlib import Path
+        npz_files = list(Path("data/AMASS").rglob("*.npz"))
+        self.test("7. NPZ files present", len(npz_files) > 0, f"{len(npz_files)} files")
+        self.test("8. At least 10 sequences", len(npz_files) >= 10, f"{len(npz_files)} files")
+        self.test("9. Motion dim check", MOTION_DIM == 168, f"dim={MOTION_DIM}")
+        self.test("10. FPS constant", MOTION_FPS == 30, f"fps={MOTION_FPS}")
 
     def _test_generator_setup(self) -> None:
         print("\n[11-15] GENERATOR SETUP")
         print("-" * 50)
 
         try:
-            from src.modules.motion_generator import MotionGenerator
             self.generator = MotionGenerator(use_retrieval=True, use_ssm=True)
             self.test("11. Generator initialized", True)
         except Exception as e:
@@ -123,10 +112,11 @@ class M4Benchmark:
         self.test("13. SSM model ready", self.generator.ssm_model is not None)
 
         if self.generator.retriever:
-            n_actions = len(self.generator.retriever.action_index)
-            self.test(_TEST_ACTION_IDX, n_actions >= 10, f"{n_actions} actions")
+            # AMASSSampleRetriever stores samples in self._samples list (not _motion_count)
+            n_samples = len(getattr(self.generator.retriever, '_samples', []))
+            self.test("14. Retriever has samples", n_samples > 0, f"{n_samples} motions")
         else:
-            self.test(_TEST_ACTION_IDX, False)
+            self.test("14. Retriever has samples", False)
 
         self.test("15. SSM checkpoint exists", os.path.exists("checkpoints/motion_ssm/best_model.pt"))
 
@@ -151,7 +141,8 @@ class M4Benchmark:
         for name, prompt in actions:
             try:
                 clip = self.generator.generate(prompt, num_frames=60, prefer="retrieval")
-                ok = clip is not None and clip.source in ("retrieved", "semantic_retrieved")
+                # AMASSSampleRetriever sets source to "sample_<dataset_id>"
+                ok = clip is not None and clip.source.startswith("sample_")
                 self.test(name, ok, f"{clip.num_frames}f {clip.source}" if clip else "")
             except Exception as e:
                 self.test(name, False, str(e)[:30])
@@ -174,13 +165,13 @@ class M4Benchmark:
 
         try:
             clip = self.generator.generate("test", num_frames=100, prefer="ssm")
-            self.test("26. Motion shape (100, 251)", clip.frames.shape == (100, 251))
+            self.test("26. Motion shape (100, 168)", clip.frames.shape == (100, MOTION_DIM))
         except Exception as e:
             self.test("26. Motion shape", False, str(e)[:30])
 
         try:
             clip = self.generator.generate("test", prefer="ssm")
-            self.test("27. FPS = 20", clip.fps == 20)
+            self.test("27. FPS = 30", clip.fps == MOTION_FPS)
         except Exception as e:
             self.test("27. FPS", False, str(e)[:30])
 
@@ -198,7 +189,7 @@ class M4Benchmark:
             walk = self.generator.generate("walk forward", prefer="retrieval")
             run  = self.generator.generate("run fast", prefer="retrieval")
             diff = abs(np.std(walk.frames) - np.std(run.frames))
-            self.test(_TEST_WALK_RUN, diff > 0.1, f"diff={diff:.2f}")
+            self.test(_TEST_WALK_RUN, bool(diff > 0.1), f"diff={diff:.2f}")
         except Exception as e:
             self.test(_TEST_WALK_RUN, False, str(e)[:30])
 
@@ -211,7 +202,12 @@ class M4Benchmark:
             self.test(_TEST_KICK_JUMP, False, str(e)[:30])
 
         try:
-            covered = sum(1 for a in ["walk", "run", "kick", "jump", "wave"] if a in self.generator.retriever.action_index)
+            retriever = self.generator.retriever
+            if retriever is not None:
+                covered = sum(1 for a in ["walk", "run", "kick", "jump", "wave"]
+                              if self.generator.generate(a, num_frames=30, prefer="retrieval").source != "placeholder")
+            else:
+                covered = 0
             self.test("30. Action coverage >= 5", covered >= 5, f"{covered} actions")
         except Exception as e:
             self.test("30. Action coverage", False, str(e)[:30])

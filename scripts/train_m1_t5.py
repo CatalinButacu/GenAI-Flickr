@@ -1,4 +1,4 @@
-"""Fine-tune flan-t5-small for M1 scene extraction (seq2seq: sentence → JSON).
+﻿"""Fine-tune flan-t5-small for M1 scene extraction (seq2seq: sentence → JSON).
 
 Usage: python scripts/train_m1_t5.py [--model ...] [--epochs 15] [--max-steps 10]
 """
@@ -12,6 +12,21 @@ import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+import datasets
+import torch
+import transformers
+import wandb as _wandb
+from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+from rouge_score import rouge_scorer
+from transformers import (
+    T5ForConditionalGeneration,
+    AutoTokenizer,
+    Seq2SeqTrainer,
+    Seq2SeqTrainingArguments,
+    DataCollatorForSeq2Seq,
+    EarlyStoppingCallback,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -182,7 +197,6 @@ class SceneExtractionMetrics:
         metrics["json_syntax_rate"] = valid_json / max(len(predictions), 1)
 
         # ROUGE-L
-        from rouge_score import rouge_scorer
         scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
         rouge_scores = [
             scorer.score(ref, pred)["rougeL"].fmeasure
@@ -191,7 +205,6 @@ class SceneExtractionMetrics:
         metrics["rouge_l"] = sum(rouge_scores) / max(len(rouge_scores), 1)
 
         # BLEU-4
-        from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
         refs_tok  = [[ref.split()] for ref in label_strs]
         preds_tok = [pred.split() for pred in predictions]
         sf = SmoothingFunction().method1
@@ -293,16 +306,6 @@ class T5Trainer:
     def run(self) -> None:
         self._check_dependencies()
 
-        import torch
-        from transformers import (
-            T5ForConditionalGeneration,
-            AutoTokenizer,
-            Seq2SeqTrainer,
-            Seq2SeqTrainingArguments,
-            DataCollatorForSeq2Seq,
-            EarlyStoppingCallback,
-        )
-
         log.info("Loading tokenizer + model: %s", self._model_name)
         tokenizer = AutoTokenizer.from_pretrained(self._model_name)
         # T5 SentencePiece vocab has no { or } tokens -- they are silently
@@ -338,7 +341,6 @@ class T5Trainer:
         # --- Optional wandb tracking ---
         report_to = "none"
         if self._wandb_project:
-            import wandb as _wandb
             _wandb.init(
                 project=self._wandb_project,
                 name=self._wandb_run_name,
@@ -418,21 +420,18 @@ class T5Trainer:
         log.info("Training complete. Final metrics: %s", final_metrics)
 
         if report_to == "wandb":
-            import wandb as _wandb
             _wandb.finish()
 
     @staticmethod
     def _check_dependencies() -> None:
-        import transformers  # noqa: F401
-        import torch  # noqa: F401
-        import datasets  # noqa: F401
+        """All dependencies are top-level imports — nothing to check."""
 
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Fine-tune flan-t5-small for M1 scene extraction")
     p.add_argument("--model",       default="google/flan-t5-small",        help="Base model name on HuggingFace Hub")
     p.add_argument("--data-dir",    default="data/m1_training",            help="Directory containing train.jsonl / val.jsonl")
-    p.add_argument("--output",      default="checkpoints/scene_understanding/scene_extractor", help="Output directory for model checkpoint")
+    p.add_argument("--output",      default="checkpoints/understanding/scene_extractor", help="Output directory for model checkpoint")
     p.add_argument("--epochs",      type=int, default=15)
     p.add_argument("--batch-size",  type=int, default=4)
     p.add_argument("--lr",          type=float, default=5e-5)
@@ -443,7 +442,7 @@ def _parse_args() -> argparse.Namespace:
                         "Run build_vg_dataset.py with the slim schema to keep this "
                         "well under 256. Training aborts if >20%% of labels are truncated.")
     p.add_argument("--resume-from",   default=None,
-                   help="Path to a HuggingFace checkpoint dir to resume from (e.g. checkpoints/scene_understanding/scene_extractor/checkpoint-15)")
+                   help="Path to a HuggingFace checkpoint dir to resume from (e.g. checkpoints/understanding/scene_extractor/checkpoint-15)")
     p.add_argument("--wandb-project",  default=None,
                    help="wandb project name. Enables experiment tracking. E.g. --wandb-project m1-scene-extractor")
     p.add_argument("--wandb-run",      default=None,

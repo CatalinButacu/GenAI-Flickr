@@ -1,5 +1,9 @@
 # Story Agent - Deep Research Analysis
 
+> **NOTE**: This document is **research background / design inspiration** for M1 (Scene Parser) and M2
+> (Knowledge Retriever). There is **no `StoryAgent` class or `story_agent.py`** in the codebase.
+> The concepts described here are incorporated directly into M1+M2.
+
 ## The Giants We Stand On
 
 ### 1. Text2Scene (CVPR 2019) - Compositional Scene Generation

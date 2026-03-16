@@ -14,7 +14,7 @@ to re-insert the missing braces before parsing.
 Usage
 -----
     python scripts/test_m1_inference.py
-    python scripts/test_m1_inference.py --checkpoint checkpoints/scene_understanding/scene_extractor
+    python scripts/test_m1_inference.py --checkpoint checkpoints/understanding/scene_extractor
     python scripts/test_m1_inference.py --prompt "a dog chases a ball in the park"
 """
 
@@ -28,6 +28,9 @@ import os
 from pathlib import Path
 from typing import Any
 
+import torch
+from transformers import T5ForConditionalGeneration, AutoTokenizer
+
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT))
 
@@ -38,8 +41,6 @@ W = 72
 # ---------------------------------------------------------------------------
 
 def load_model(checkpoint: str):
-    from transformers import T5ForConditionalGeneration, AutoTokenizer
-    import torch
     path = Path(checkpoint)
     if not (path / "config.json").exists():
         raise FileNotFoundError(f"No checkpoint at '{path}'. Run train_m1_t5.py first.")
@@ -54,7 +55,6 @@ def load_model(checkpoint: str):
 
 def predict(model, tokenizer, device: str, prompt: str,
             max_out: int = 512, beams: int = 4) -> str:
-    import torch
     ids = tokenizer(f"extract scene: {prompt}", max_length=256,
                     truncation=True, return_tensors="pt").to(device)
     with torch.no_grad():
@@ -67,8 +67,7 @@ def predict(model, tokenizer, device: str, prompt: str,
     # Strip remaining T5 special tokens (pad, eos, bos, unk) but NOT extra_ids
     raw = raw.replace("</s>", "").replace("<pad>", "").replace("<s>", "").replace("<unk>", "")
     # Strip any extra_id tokens that were NOT converted (e.g. extra_id_2 and above)
-    import re as _re
-    raw = _re.sub(r'<extra_id_\d+>', '', raw)
+    raw = re.sub(r'<extra_id_\d+>', '', raw)
     return raw.strip()
 
 
@@ -256,7 +255,7 @@ def load_test_samples(path: str, n: int = 5) -> list[dict]:
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--checkpoint", default="checkpoints/scene_understanding/scene_extractor")
+    ap.add_argument("--checkpoint", default="checkpoints/understanding/scene_extractor")
     ap.add_argument("--test-set",   default="data/m1_training/test.jsonl")
     ap.add_argument("--prompt",     default=None)
     ap.add_argument("--n-test",     type=int, default=4)

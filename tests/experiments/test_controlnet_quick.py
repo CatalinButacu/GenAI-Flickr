@@ -1,9 +1,9 @@
-"""
+﻿"""
 Quick ControlNet test — generates 2-3 photorealistic human frames
 from physics-verified skeleton poses.
 
 This script:
-  1. Loads a KIT-ML walking clip
+  1. Generates a walking motion clip via SSM
   2. Projects 3 skeleton frames → OpenPose images
   3. Runs SD 1.5 + ControlNet OpenPose → photorealistic RGB
   4. Saves side-by-side comparison: skeleton | photorealistic
@@ -38,9 +38,9 @@ def main() -> None:
     out_dir = "outputs/controlnet_test"
     os.makedirs(out_dir, exist_ok=True)
 
-    # ── Step 1: Load a walking clip from KIT-ML ─────────────────────────
-    log.info("Loading KIT-ML motion data…")
-    from src.modules.motion_generator import MotionGenerator
+    # ── Step 1: Generate a walking clip ──────────────────────────────
+    log.info("Generating motion data…")
+    from src.modules.motion import MotionGenerator
 
     mg = MotionGenerator(use_retrieval=True, use_ssm=False)
     clip = mg.generate("walk forward", num_frames=60)
@@ -53,7 +53,7 @@ def main() -> None:
     log.info("Loaded clip: %s, shape=%s", clip.action, raw.shape)
 
     # ── Step 2: Pick 3 frames and project to OpenPose ───────────────────
-    from src.modules.ai_enhancer import SkeletonProjector
+    from src.modules.diffusion import SkeletonProjector
 
     projector = SkeletonProjector(img_w=512, img_h=512, cam_yaw_deg=15.0)
     indices = [0, len(raw) // 2, len(raw) - 1]

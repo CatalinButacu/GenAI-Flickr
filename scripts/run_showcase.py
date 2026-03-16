@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Run the full pipeline on 10 diverse showcase prompts at best quality.
 
@@ -15,6 +15,7 @@ Usage:
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -86,7 +87,7 @@ def main():
         use_t5_parser=True,
         use_motion_generation=True,
         use_asset_generation=False,
-        use_ai_enhancement=False,
+        use_diffusion=False,
         use_render_engine=True,
     )
 
@@ -138,7 +139,6 @@ def main():
     print("=" * 70)
 
     # Save summary
-    import json
     summary_path = os.path.join(args.outdir, "showcase_summary.json")
     with open(summary_path, "w") as f:
         json.dump(results, f, indent=2)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Integration Benchmark — End-to-End Pipeline
 ============================================
 Tests the full pipeline (M1→M2→M4→M5→M7→MP4) on diverse prompts.
@@ -17,6 +17,8 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.pipeline import Pipeline, PipelineConfig
 
 # ---------------------------------------------------------------------------
 # Test prompts (diverse coverage)
@@ -68,12 +70,11 @@ class IntegrationBenchmark:
         print("\n[SETUP] Loading pipeline ...")
         t0 = time.time()
         try:
-            from src.pipeline import Pipeline, PipelineConfig
             cfg = PipelineConfig(
                 use_t5_parser=False,       # rules parser (fast, no GPU for M1)
                 use_motion_generation=True,
                 use_asset_generation=False,
-                use_ai_enhancement=False,
+                use_diffusion=False,
                 duration=1.5,
                 fps=12,
                 output_dir="outputs/integration_test",

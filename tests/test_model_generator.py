@@ -1,7 +1,7 @@
 """Tests for Model Generator - backend strategy logic."""
 
 import pytest
-from src.modules.asset_generator.generator import GeneratedModel, ModelGenerator
+from src.modules.assets.generator import GeneratedModel, ModelGenerator
 
 
 class TestGeneratedModel:

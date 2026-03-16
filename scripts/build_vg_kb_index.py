@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -94,7 +96,6 @@ class TextEncoder:
         self._model = None
 
     def load(self) -> None:
-        from sentence_transformers import SentenceTransformer
         self._model = SentenceTransformer(self._model_name)
         log.info("Loaded embedding model: %s", self._model_name)
 
@@ -119,8 +120,6 @@ class FAISSIndexBuilder:
     """Builds and persists a FAISS IndexFlatIP (inner product = cosine on L2-normed vecs)."""
 
     def build_and_save(self, embeddings: np.ndarray, output_path: Path) -> None:
-        import faiss
-
         dim = embeddings.shape[1]
         index = faiss.IndexFlatIP(dim)
         index.add(embeddings)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Train PhysicsSSM on KIT-ML with physics-derived state vectors.
+Train PhysicsSSM on AMASS with physics-derived state vectors.
 
 This trains the novel contribution: a learned sigmoid gate that blends
 SSM temporal modelling with physics constraints.
@@ -17,22 +17,22 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.motion_generator.physics_trainer import (
+from src.modules.motion.physics_trainer import (
     PhysicsTrainingConfig,
     train_physics_ssm,
 )
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train PhysicsSSM on KIT-ML")
+    parser = argparse.ArgumentParser(description="Train PhysicsSSM on AMASS")
     parser.add_argument("--epochs", type=int, default=100, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=16, help="Batch size")
     parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate")
     parser.add_argument("--lambda-physics", type=float, default=0.1,
                         help="Weight for physics violation loss")
     parser.add_argument("--device", type=str, default="cuda", help="Device")
-    parser.add_argument("--data-dir", type=str, default="data/KIT-ML",
-                        help="KIT-ML data directory")
+    parser.add_argument("--data-dir", type=str, default="data/AMASS",
+                        help="AMASS data directory")
     parser.add_argument("--checkpoint-dir", type=str,
                         default="checkpoints/physics_ssm",
                         help="Checkpoint output directory")
@@ -45,6 +45,8 @@ def main():
                         help="Path to checkpoint to resume from")
     parser.add_argument("--grad-clip", type=float, default=0.5,
                         help="Gradient clipping max norm")
+    parser.add_argument("--grad-accum", type=int, default=1,
+                        help="Gradient accumulation steps (effective batch = batch-size * grad-accum)")
     args = parser.parse_args()
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
@@ -73,6 +75,7 @@ def main():
         save_every=args.save_every,
         resume_from=args.resume_from,
         grad_clip=args.grad_clip,
+        accum_steps=args.grad_accum,
     )
 
     log = logging.getLogger(__name__)

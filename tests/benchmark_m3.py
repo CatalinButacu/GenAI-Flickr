@@ -10,8 +10,10 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.asset_generator import ModelGenerator
-from src.modules.asset_generator.generator import GeneratedModel, ShapEBackend
+from src.modules.assets import ModelGenerator
+from src.modules.assets.generator import GeneratedModel, ShapEBackend, TripoSRBackend
+import diffusers
+import torch
 
 
 _NOT_READY = "generator not ready"
@@ -40,13 +42,11 @@ class M3Benchmark:
         print("-" * 50)
 
         try:
-            from src.modules.asset_generator import ModelGenerator  # noqa: F401
             self.test("1. ModelGenerator import", True)
         except ImportError as e:
             self.test("1. ModelGenerator import", False, str(e)[:30])
 
         try:
-            from src.modules.asset_generator.generator import ShapEBackend, TripoSRBackend  # noqa: F401
             self.test("2. Backend classes", True)
         except ImportError as e:
             self.test("2. Backend classes", False, str(e)[:30])
@@ -71,20 +71,17 @@ class M3Benchmark:
         print("-" * 50)
 
         try:
-            import diffusers  # noqa: F401
             self.test("6. Diffusers installed", True)
         except ImportError:
             self.test("6. Diffusers installed", False)
 
         try:
-            import torch  # noqa: F401
             self.test("7. PyTorch installed", True)
         except ImportError:
             self.test("7. PyTorch installed", False)
 
         has_cuda = False
         try:
-            import torch
             has_cuda = torch.cuda.is_available()
             self.test("8. CUDA available", has_cuda)
         except Exception:

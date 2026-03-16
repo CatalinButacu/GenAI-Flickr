@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Train Motion SSM on KIT-ML. Usage: python scripts/train_motion_ssm.py --epochs 50 --device cuda"""
+"""Train Motion SSM on AMASS. Usage: python scripts/train_motion_ssm.py --epochs 50 --device cuda"""
 
 import argparse
 import logging
@@ -9,17 +9,18 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.modules.motion_generator.trainer import TrainingConfig, train_motion_ssm
+from src.modules.motion.trainer import TrainingConfig, train_motion_ssm
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train Motion SSM on KIT-ML")
+    parser = argparse.ArgumentParser(description="Train Motion SSM on AMASS")
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=16, help="Batch size")
     parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate")
     parser.add_argument("--device", type=str, default="cuda", help="Device")
-    parser.add_argument("--data-dir", type=str, default="data/KIT-ML", help="Data directory")
+    parser.add_argument("--data-dir", type=str, default="data/AMASS", help="Data directory")
     parser.add_argument("--checkpoint-dir", type=str, default="checkpoints/motion_ssm", help="Checkpoint dir")
+    parser.add_argument("--resume", type=str, default=None, help="Resume from checkpoint path or 'latest'")
     parser.add_argument("--d-model", type=int, default=256, help="Model dimension")
     parser.add_argument("--n-layers", type=int, default=4, help="Number of SSM layers")
     args = parser.parse_args()
@@ -41,8 +42,10 @@ def main():
         num_epochs=args.epochs,
         device=args.device,
         checkpoint_dir=args.checkpoint_dir,
+        resume_from=args.resume,
         d_model=args.d_model,
-        n_layers=args.n_layers
+        n_layers=args.n_layers,
+        seed=None if args.seed == -1 else args.seed,
     )
     
     best_loss = train_motion_ssm(config)

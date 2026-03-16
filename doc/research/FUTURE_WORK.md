@@ -1,4 +1,4 @@
-# Future Implementations Research
+﻿# Future Implementations Research
 
 Research summary for remaining dissertation pipeline features.
 
@@ -117,7 +117,7 @@ More complex to implement, but more robust than kinematic playback.
 ### A. Test humanoid body loading
 
 ```bash
-py -c "from src.physics_engine.humanoid import HumanoidBody; print('OK')"
+py -c "from src.modules.physics.humanoid import HumanoidBody; print('OK')"
 ```
 
 ### B. Apply motion to humanoid (next step)
